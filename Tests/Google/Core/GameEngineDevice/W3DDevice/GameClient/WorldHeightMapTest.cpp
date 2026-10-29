@@ -278,3 +278,9 @@ TEST_F(WorldHeightMapTest, LoadsTextureClassesAtEndOfTileArray)
 	tiles.edgeTextureClasses = textureClass(NUM_SOURCE_TILES - 4, 4, 2, true);
 	load(heightMap() + blendTileData(tiles));
 }
+
+TEST_F(WorldHeightMapTest, ThrowsOnTimeOfDayOutsideOfLightingArrays)
+{
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(BlendTiles()) + globalLighting(-1)); });
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(BlendTiles()) + globalLighting(TIME_OF_DAY_COUNT)); });
+}

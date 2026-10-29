@@ -766,7 +766,12 @@ Bool WorldHeightMap::ParseWorldDictDataChunk(DataChunkInput &file, DataChunkInfo
 */
 Bool WorldHeightMap::ParseLightingDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
-		TheWritableGlobalData->m_timeOfDay = (TimeOfDay)file.readInt();
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the time of day is outside of the lighting arrays that it indexes.
+		const Int timeOfDay = file.readInt();
+		if (timeOfDay < 0 || timeOfDay >= TIME_OF_DAY_COUNT) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
+		TheWritableGlobalData->m_timeOfDay = (TimeOfDay)timeOfDay;
 		Int i;
 		GlobalData::TerrainLighting	initLightValues	= { { 0,0,0},{0,0,0},{0,0,-1.0f}};
 
