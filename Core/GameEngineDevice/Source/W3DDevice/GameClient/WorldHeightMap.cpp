@@ -890,6 +890,13 @@ static Bool isValidHeightDataSize(DataChunkInput &file, Int dataSize, Int width,
 	return dataSize > 0 && dataSize == width * height && (UnsignedInt)dataSize <= file.getChunkDataSizeLeft();
 }
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Validates the number of boundaries against the chunk data before the boundaries are allocated.
+// Each boundary takes two Ints.
+static Bool isValidNumBoundaries(DataChunkInput &file, Int numBoundaries)
+{
+	return numBoundaries >= 0 && (UnsignedInt)numBoundaries <= file.getChunkDataSizeLeft() / (2 * sizeof(Int));
+}
+
 /**
 * WorldHeightMap::ParseHeightMapData - read a height map chunk.
 * Format is the newer CHUNKY format.
@@ -926,6 +933,9 @@ Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *inf
 
 	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
 		Int numBorders = file.readInt();
+		if (!isValidNumBoundaries(file, numBorders)) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		m_boundaries.resize(numBorders);
 		for (int i = 0; i < numBorders; ++i) {
 			m_boundaries[i].x = file.readInt();
@@ -1005,6 +1015,9 @@ Bool WorldHeightMap::ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, vo
 
 	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
 		Int numBorders = file.readInt();
+		if (!isValidNumBoundaries(file, numBorders)) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		m_boundaries.resize(numBorders);
 		for (int i = 0; i < numBorders; ++i) {
 			m_boundaries[i].x = file.readInt();

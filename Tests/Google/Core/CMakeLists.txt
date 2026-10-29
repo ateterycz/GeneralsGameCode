@@ -22,6 +22,7 @@ set(COREI_GOOGLETEST_SRC
     GameEngine/GameNetwork/NetPacketTest.cpp
     GameEngine/GameNetwork/NetworkUtilTest.cpp
     GameEngineDevice/StdDevice/Common/StdLocalFileSystemTest.cpp
+    GameEngineDevice/W3DDevice/GameClient/WorldHeightMapTest.cpp
     Libraries/Compression/CompressionManagerTest.cpp
     Libraries/WWVegas/WW3D2/assetmgr_test.cpp
     Libraries/WWVegas/WW3D2/hlod_test.cpp

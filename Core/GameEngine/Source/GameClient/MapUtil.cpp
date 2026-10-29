@@ -180,6 +180,11 @@ static Bool ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, void *userD
 
 	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
 		Int numBorders = file.readInt();
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the chunk is too short for the number of boundaries, before they are allocated.
+		// Each boundary takes two Ints.
+		if (numBorders < 0 || (UnsignedInt)numBorders > file.getChunkDataSizeLeft() / (2 * sizeof(Int))) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		m_boundaries.resize(numBorders);
 		for (int i = 0; i < numBorders; ++i) {
 			m_boundaries[i].x = file.readInt();
