@@ -86,7 +86,7 @@ void BIGFileSystem::init() {
 		return;
 	}
 
-	loadArchiveFilesFromDirectory("", "*.big");
+	loadGameArchiveFilesFromDirectory("");
 
 #if RTS_ZEROHOUR
     // load original Generals assets
@@ -247,6 +247,13 @@ Bool BIGFileSystem::loadArchiveFilesFromDirectory(AsciiString dir, AsciiString f
 		}
 #endif
 
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Skips an archive that is loaded already, which loadGameArchiveFilesFromDirectory
+		// asks for. Loading it again would list its files twice and leak the first archive.
+		if (m_archiveFileMap.find(*it) != m_archiveFileMap.end()) {
+			it++;
+			continue;
+		}
+
 		ArchiveFile *archiveFile = openArchiveFile((*it).str());
 
 		if (archiveFile != nullptr) {
@@ -261,6 +268,14 @@ Bool BIGFileSystem::loadArchiveFilesFromDirectory(AsciiString dir, AsciiString f
 	}
 
 	return actuallyAdded;
+}
+
+Bool BIGFileSystem::loadGameArchiveFilesFromDirectory(AsciiString dir) {
+	// The file of the archive that loads first is the one that is used. The Steam 1.05 patch has the window transitions
+	// for its new main menu buttons in PatchINI.big, which would otherwise lose to the same file in INIZH.big.
+	const Bool addedPatches = loadArchiveFilesFromDirectory(dir, "Patch*.big");
+	const Bool addedOthers = loadArchiveFilesFromDirectory(dir, "*.big");
+	return addedPatches || addedOthers;
 }
 
 void BIGFileSystem::loadMods()

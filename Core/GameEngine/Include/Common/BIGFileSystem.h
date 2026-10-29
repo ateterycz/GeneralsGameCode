@@ -51,6 +51,10 @@ public:
 
 	virtual Bool loadArchiveFilesFromDirectory(AsciiString dir, AsciiString fileMask, Bool overwrite = FALSE) override;
 
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Loads the archives of a game directory with the Patch*.big archives first,
+	// so that their files take precedence over the same files in other archives, like the Steam 1.05 executable does.
+	Bool loadGameArchiveFilesFromDirectory(AsciiString dir);
+
 	virtual void loadMods() override;
 protected:
 

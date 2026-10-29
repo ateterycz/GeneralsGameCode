@@ -202,3 +202,94 @@ TEST_F(FileSystemTest, KnowsCreatedFileInAnySpelling)
 	EXPECT_TRUE(TheFileSystem->doesFileExist("data/ini/weapon.ini"));
 	EXPECT_TRUE(TheFileSystem->doesFileExist("DATA\\\\INI//WEAPON.INI"));
 }
+
+namespace
+{
+
+typedef std::vector<std::pair<std::string, std::string> > ArchiveContent;
+
+void appendBigEndian(std::string& buffer, UnsignedInt value)
+{
+	buffer += static_cast<char>((value >> 24) & 0xFF);
+	buffer += static_cast<char>((value >> 16) & 0xFF);
+	buffer += static_cast<char>((value >> 8) & 0xFF);
+	buffer += static_cast<char>(value & 0xFF);
+}
+
+// Writes a BIG archive with the files and their content into the working directory.
+void writeBigFile(const char *name, const ArchiveContent& files)
+{
+	UnsignedInt headerSize = 16;
+	for (size_t i = 0; i < files.size(); ++i)
+	{
+		headerSize += 8 + static_cast<UnsignedInt>(files[i].first.size()) + 1;
+	}
+
+	std::string entries;
+	std::string data;
+	for (size_t i = 0; i < files.size(); ++i)
+	{
+		appendBigEndian(entries, headerSize + static_cast<UnsignedInt>(data.size()));
+		appendBigEndian(entries, static_cast<UnsignedInt>(files[i].second.size()));
+		entries += files[i].first;
+		entries += '\0';
+		data += files[i].second;
+	}
+
+	const UnsignedInt archiveSize = headerSize + static_cast<UnsignedInt>(data.size());
+	std::string archive("BIGF");
+	for (Int i = 0; i < 4; ++i)
+	{
+		archive += static_cast<char>((archiveSize >> (8 * i)) & 0xFF);
+	}
+	appendBigEndian(archive, static_cast<UnsignedInt>(files.size()));
+	appendBigEndian(archive, headerSize);
+	archive += entries;
+	archive += data;
+
+	std::ofstream(name, std::ios::binary) << archive;
+}
+
+std::string readGameFile(const char *filename)
+{
+	File *file = TheFileSystem->openFile(filename, File::READ | File::BINARY);
+	EXPECT_NE(file, nullptr) << filename;
+	if (file == nullptr)
+	{
+		return std::string();
+	}
+	std::string content(static_cast<size_t>(file->size()), '\0');
+	if (!content.empty())
+	{
+		EXPECT_EQ(file->read(&content[0], static_cast<Int>(content.size())), static_cast<Int>(content.size()));
+	}
+	file->close();
+	return content;
+}
+
+} // namespace
+
+// The Steam 1.05 patch replaces files of other archives with its Patch*.big archives, such as the window transitions
+// of its new main menu buttons, so their files are used even though the other archives come first by name.
+TEST_F(FileSystemTest, UsesFilesOfPatchArchivesBeforeOtherArchives)
+{
+	writeBigFile("INIZH.big", ArchiveContent(1, std::make_pair("Data\\INI\\WindowTransitions.ini", "original")));
+	writeBigFile("PatchINI.big", ArchiveContent(1, std::make_pair("Data\\INI\\WindowTransitions.ini", "patched")));
+	writeBigFile("WindowZH.big", ArchiveContent(1, std::make_pair("Window\\Menus\\MainMenu.wnd", "window")));
+
+	EXPECT_TRUE(static_cast<BIGFileSystem *>(TheArchiveFileSystem)->loadGameArchiveFilesFromDirectory(""));
+
+	EXPECT_EQ(readGameFile("Data\\INI\\WindowTransitions.ini"), "patched");
+	EXPECT_EQ(readGameFile("Window\\Menus\\MainMenu.wnd"), "window");
+}
+
+// Without patch archives, the file of the archive that comes first by name is used, as before.
+TEST_F(FileSystemTest, UsesFileOfFirstArchiveByNameWithoutPatchArchives)
+{
+	writeBigFile("INIZH.big", ArchiveContent(1, std::make_pair("Data\\INI\\WindowTransitions.ini", "first")));
+	writeBigFile("ZZ.big", ArchiveContent(1, std::make_pair("Data\\INI\\WindowTransitions.ini", "second")));
+
+	EXPECT_TRUE(static_cast<BIGFileSystem *>(TheArchiveFileSystem)->loadGameArchiveFilesFromDirectory(""));
+
+	EXPECT_EQ(readGameFile("Data\\INI\\WindowTransitions.ini"), "first");
+}
