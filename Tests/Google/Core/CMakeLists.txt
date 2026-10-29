@@ -7,6 +7,8 @@ set(COREI_GOOGLETEST_SRC
     GameEngine/Common/INITest.cpp
     GameEngine/Common/SimulationMathCrcTest.cpp
     GameEngine/GameClient/DisplayStringDummyTest.cpp
+    GameEngine/GameNetwork/NetCommandWrapperListTest.cpp
+    GameEngine/GameNetwork/NetPacketStructsTest.cpp
     GameEngineDevice/StdDevice/Common/StdLocalFileSystemTest.cpp
     Libraries/Compression/CompressionManagerTest.cpp
     Libraries/WWVegas/WW3D2/hlod_test.cpp

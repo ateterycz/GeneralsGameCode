@@ -1060,7 +1060,9 @@ size_t NetPacketWrapperCommandData::readMessage(NetCommandRef &ref, NetPacketBuf
 	size_t size = 0;
 	size += network::readObject(data, buf.offset(size));
 
-	NetCommandDataChunk dataChunk(data.dataLength);
+	// TheSuperHackers @security ateterycz 29/10/2026 Prevent allocating more data than the buffer holds
+	const UnsignedInt dataLength = static_cast<UnsignedInt>(std::min<size_t>(data.dataLength, buf.offset(size).size()));
+	NetCommandDataChunk dataChunk(dataLength);
 	size += network::readBytes(dataChunk.data(), dataChunk.size(), buf.offset(size));
 
 	cmdMsg->setWrappedCommandID(data.wrappedCommandId);
@@ -1122,6 +1124,8 @@ size_t NetPacketFileCommandData::readMessage(NetCommandRef &ref, NetPacketBuf bu
 	size += network::readStringWithNull(filename, _MAX_PATH, buf.offset(size));
 	size += network::readObject(dataLength, buf.offset(size));
 
+	// TheSuperHackers @security ateterycz 29/10/2026 Prevent allocating more data than the buffer holds
+	dataLength = static_cast<UnsignedInt>(std::min<size_t>(dataLength, buf.offset(size).size()));
 	NetCommandDataChunk dataChunk(dataLength);
 	size += network::readBytes(dataChunk.data(), dataChunk.size(), buf.offset(size));
 

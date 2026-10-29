@@ -106,7 +106,7 @@ struct TransferFileRule
 
 static const TransferFileRule transferFileRules[] =
 {
-	{ ".map", 5 * 1024 * 1024 },
+	{ ".map", MAX_MAP_TRANSFER_SIZE },
 	{ ".ini", 2 * 1024 * 1024 },
 	{ ".str", 512 * 1024 },
 	{ ".txt", 1 * 1024 * 1024 },
@@ -496,7 +496,7 @@ void ConnectionManager::doRelay() {
 		}
 	}
 
-	NetCommandList *cmdList = m_netCommandWrapperList->getReadyCommands();
+	NetCommandList *cmdList = m_netCommandWrapperList->getReadyCommands(timeGetTime());
 	for (NetCommandRef* cmd = cmdList->getFirstMessage(); cmd; cmd = cmd->getNext()) {
 		if (CommandRequiresAck(cmd->getCommand())) {
 			ackCommand(cmd, m_localSlot);
@@ -671,7 +671,8 @@ void ConnectionManager::processWrapper(NetCommandRef *ref)
 
 	if (fcIt != s_fileCommandMap.end())
 	{
-		Int newProgress = m_netCommandWrapperList->getPercentComplete(commandID);
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Get the progress of the wrapped command of this sender
+		Int newProgress = m_netCommandWrapperList->getPercentComplete(wrapperMsg->getPlayerID(), commandID);
 		DEBUG_LOG_LEVEL(DEBUG_LEVEL_NET, ("ConnectionManager::processWrapper() - newProgress[%d] == %d for command %d",
 			m_localSlot, newProgress, commandID));
 		if (newProgress > origProgress && newProgress < 100)

@@ -82,6 +82,9 @@ static constexpr const Int MAX_NETWORK_MESSAGE_LEN = MAX_UDP_PAYLOAD_SIZE;
 // TheSuperHackers @bugfix Mauller 08/02/2026 Double send and receive buffer sizes to alleviate the occurance of disconnection issues in retail and non retail code.
 static constexpr const Int MAX_MESSAGES = 256;
 
+// TheSuperHackers @security ateterycz 29/10/2026 The largest map file that a player can transfer, which also limits the size of a wrapped command.
+static constexpr const UnsignedInt MAX_MAP_TRANSFER_SIZE = 5 * 1024 * 1024;
+
 /**
  * Command packet - contains frame #, total # of commands, and each command.  This is what gets sent
  * to each player every frame

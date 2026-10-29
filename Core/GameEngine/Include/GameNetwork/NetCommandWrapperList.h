@@ -29,6 +29,14 @@
 
 #include "GameNetwork/NetCommandList.h"
 
+// TheSuperHackers @security ateterycz 29/10/2026 Limit the size of a wrapped command to the largest legitimate one.
+// That is a file transfer of the largest map plus its command header and file name.
+static constexpr const UnsignedInt MAX_WRAPPED_COMMAND_DATA_LENGTH = MAX_MAP_TRANSFER_SIZE + 1024;
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Keep a delivered wrapped command for this many milliseconds, to ignore the chunks
+// that its sender resends because their ack got lost. Connection resends an unacknowledged command every 2 seconds.
+static constexpr const UnsignedInt DELIVERED_WRAPPED_COMMAND_KEEP_TIME = 60 * 1000;
+
 class NetCommandWrapperListNode : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(NetCommandWrapperListNode, "NetCommandWrapperListNode")
@@ -37,7 +45,13 @@ public:
 	//virtual ~NetCommandWrapperListNode();
 
 	Bool isComplete();
+	Bool isDelivered();
+	UnsignedInt getDeliveredTime();
+	void markDelivered(UnsignedInt deliveredTime);
+	Bool hasSameSizes(NetWrapperCommandMsg *msg);
+	UnsignedInt getPlayerID();
 	UnsignedShort getCommandID();
+	UnsignedInt getNumChunks();
 	UnsignedInt getRawDataLength();
 	void copyChunkData(NetWrapperCommandMsg *msg);
 	UnsignedByte * getRawData();
@@ -47,12 +61,17 @@ public:
 	NetCommandWrapperListNode *m_next;
 
 protected:
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Identify a wrapped command by its sender too, because players can use the same command ID
+	UnsignedInt m_playerID;
 	UnsignedShort m_commandID;
 	UnsignedByte *m_data;
 	UnsignedInt m_totalDataLength;
 	Bool *m_chunksPresent;
 	UnsignedInt m_numChunks;
 	UnsignedInt m_numChunksPresent;
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Remember the delivery of a wrapped command, to ignore the chunks that its sender resends
+	Bool m_isDelivered;
+	UnsignedInt m_deliveredTime;
 
 };
 
@@ -67,9 +86,9 @@ public:
 	void reset();
 
 	void processWrapper(NetCommandRef *ref);
-	NetCommandList * getReadyCommands();
+	NetCommandList * getReadyCommands(UnsignedInt curTime);
 
-	Int getPercentComplete(UnsignedShort wrappedCommandID);
+	Int getPercentComplete(UnsignedInt playerID, UnsignedShort wrappedCommandID);
 
 protected:
 	void removeFromList(NetCommandWrapperListNode *node);
