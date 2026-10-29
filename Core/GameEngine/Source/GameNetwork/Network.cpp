@@ -42,6 +42,7 @@
 #include "WWLib/strtok_r.h"
 #include "GameClient/Shell.h"
 #include "Common/CRCDebug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "GameLogic/GameLogic.h"
 
 #include "Common/RandomValue.h"
@@ -371,6 +372,9 @@ void Network::setSawCRCMismatch()
 	TheScriptEngine->startEndGameTimer();
 
 	TheRecorder->logCRCMismatch();
+
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the mismatch frame to the session log in all builds.
+	SessionLog::log("  The mismatch happened at frame %d or before", TheGameLogic->getFrame() - m_runAhead - 1);
 
 	// dump GameLogic random seed
 	DEBUG_LOG(("Latest frame for mismatch = %d GameLogic frame = %d",

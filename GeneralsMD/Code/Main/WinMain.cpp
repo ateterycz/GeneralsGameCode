@@ -46,6 +46,7 @@
 #include "Common/GameEngine.h"
 #include "Common/GameSounds.h"
 #include "Common/Debug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/GameMemory.h"
 #include "Common/StackDump.h"
 #include "Common/MessageStream.h"
@@ -787,6 +788,8 @@ static LONG WINAPI UnHandledExceptionFilter( struct _EXCEPTION_POINTERS* e_info 
 
 	MiniDumper::shutdownMiniDumper();
 #endif
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the crash to the session log in all builds.
+	SessionLog::logException(e_info);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -914,8 +917,14 @@ Int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 		DEBUG_LOG(("CRC message is %d", GameMessage::MSG_LOGIC_CRC));
 
+		// TheSuperHackers @feature ateterycz 29/10/2026 Opens the session log after the check for another running game,
+		// so that a second game that quits right away does not replace an older log.
+		SessionLog::open(TheGlobalData->getPath_UserData().str());
+
 		// run the game main loop
 		exitcode = GameMain();
+
+		SessionLog::close(exitcode);
 
 		delete TheVersion;
 		TheVersion = nullptr;

@@ -30,6 +30,7 @@
 #include "Common/PlayerList.h"
 #include "Common/Player.h"
 #include "Common/GlobalData.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/GameEngine.h"
 #include "GameClient/ClientInstance.h"
 #include "GameClient/MapUtil.h"
@@ -1025,6 +1026,10 @@ void RecorderClass::handleCRCMessage(UnsignedInt newCRC, Int playerIndex, Bool f
 
 			DEBUG_LOG(("Replay has gone out of sync!\nInGame:%8.8X Replay:%8.8X\nFrame:%d",
 				playbackCRC, newCRC, mismatchFrame));
+
+			// TheSuperHackers @feature ateterycz 29/10/2026 Writes the mismatch to the session log in all builds.
+			SessionLog::log("CRC MISMATCH in replay %s at frame %d: game %8.8X, replay %8.8X",
+				m_currentReplayFilename.str(), mismatchFrame, playbackCRC, newCRC);
 
 			// Print Mismatch in case we are simulating replays from console.
 			printf("CRC Mismatch in Frame %d\n", mismatchFrame);

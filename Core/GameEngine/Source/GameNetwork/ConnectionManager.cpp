@@ -30,6 +30,7 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/CRCDebug.h"
 #include "Common/Debug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameAudio.h"
@@ -1067,6 +1068,12 @@ void ConnectionManager::processAck(NetCommandMsg *msg) {
  */
 PlayerLeaveCode ConnectionManager::processPlayerLeave(NetPlayerLeaveCommandMsg *msg) {
 	UnsignedByte playerID = msg->getLeavingPlayerID();
+
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the leave to the session log in all builds.
+	AsciiString name;
+	name.translate(getPlayerName(playerID));
+	SessionLog::log("Player %s in slot %d leaves the game at frame %u", name.str(), playerID, TheGameLogic->getFrame());
+
 	if ((playerID != m_localSlot) && (m_connections[playerID] != nullptr)) {
 		DEBUG_LOG(("ConnectionManager::processPlayerLeave() - setQuitting() on player %d on frame %d", playerID, TheGameLogic->getFrame()));
 		m_connections[playerID]->setQuitting();

@@ -33,6 +33,7 @@
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/BuildAssistant.h"
 #include "Common/CRCDebug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/FramePacer.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
@@ -1916,6 +1917,9 @@ void GameLogic::tryStartNewGame( Bool loadingSaveGame )
 
 	updateLoadProgress(LOAD_PROGRESS_END);
 
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the game start to the session log in all builds.
+	SessionLog::logGameStart(loadingSaveGame);
+
 	if(isInMultiplayerGame() && TheNetwork)
 	{
 		TheNetwork->loadProgressComplete();
@@ -2363,6 +2367,25 @@ void GameLogic::processCommandList( CommandList *list )
 
 		if (sawCRCMismatch)
 		{
+			// TheSuperHackers @feature ateterycz 29/10/2026 Writes the CRCs to the session log in all builds. The CRC that
+			// fewer players share than the others is likely the one of the player that went out of sync.
+			SessionLog::log("CRC MISMATCH at frame %u, saw %d CRCs from %d players", m_frame, (Int)m_cachedCRCs.size(), numPlayers);
+			for (CachedCRCMap::const_iterator crcIt = m_cachedCRCs.begin(); crcIt != m_cachedCRCs.end(); ++crcIt)
+			{
+				Int sameCount = 0;
+				for (CachedCRCMap::const_iterator otherIt = m_cachedCRCs.begin(); otherIt != m_cachedCRCs.end(); ++otherIt)
+				{
+					if (otherIt != crcIt && otherIt->second == crcIt->second)
+						++sameCount;
+				}
+
+				Player *player = ThePlayerList->getNthPlayer(crcIt->first);
+				AsciiString name;
+				if (player != nullptr)
+					name.translate(player->getPlayerDisplayName());
+				SessionLog::log("  Player %d %s: %8.8X, same as %d other players", crcIt->first, name.str(), crcIt->second, sameCount);
+			}
+
 #ifdef DEBUG_LOGGING
 			DEBUG_LOG(("CRC Mismatch - saw %d CRCs from %d players", m_cachedCRCs.size(), numPlayers));
 			for (CachedCRCMap::const_iterator crcIt = m_cachedCRCs.begin(); crcIt != m_cachedCRCs.end(); ++crcIt)

@@ -36,6 +36,7 @@
 
 #include "Common/CommandLine.h"
 #include "Common/Debug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/CRCDebug.h"
 #include "Common/UnicodeString.h"
 #include "GameClient/ClientInstance.h"
@@ -224,6 +225,9 @@ void ReleaseCrash(const char *reason)
 
 	TriggerMiniDump();
 
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the fatal error to the session log in all builds.
+	SessionLog::logFatalError(reason);
+
 	char prevbuf[ _MAX_PATH ];
 	char curbuf[ _MAX_PATH ];
 
@@ -313,6 +317,9 @@ void ReleaseCrashLocalized(const AsciiString& p, const AsciiString& m)
 	}
 
 	TriggerMiniDump();
+
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the fatal error to the session log in all builds.
+	SessionLog::logFatalError(m.str());
 
 	UnicodeString prompt = TheGameText->fetch(p);
 	UnicodeString mesg = TheGameText->fetch(m);

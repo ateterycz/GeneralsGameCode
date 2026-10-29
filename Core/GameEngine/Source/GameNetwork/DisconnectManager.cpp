@@ -25,6 +25,7 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/Recorder.h"
 #include "GameClient/DisconnectMenu.h"
 #include "GameClient/InGameUI.h"
@@ -586,6 +587,12 @@ void DisconnectManager::disconnectPlayer(Int slot, ConnectionManager *conMgr) {
 		// Get the disconnecting player off the disconnect window.
 		UnicodeString uname = conMgr->getPlayerName(slot);
 		TheRecorder->logPlayerDisconnect(uname, slot);
+
+		// TheSuperHackers @feature ateterycz 29/10/2026 Writes the disconnect to the session log in all builds.
+		AsciiString name;
+		name.translate(uname);
+		SessionLog::log("Player %s in slot %d is disconnected at frame %u", name.str(), slot, TheGameLogic->getFrame());
+
 		TheDisconnectMenu->removePlayer(transSlot, uname);
 
 		PlayerLeaveCode retcode = conMgr->disconnectPlayer(slot);

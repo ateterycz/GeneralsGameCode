@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/CRCDebug.h"
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/FramePacer.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
@@ -255,6 +256,13 @@ void GameLogic::clearGameData( Bool showScoreScreen )
 	{
 		DEBUG_CRASH(("We tried to clear the game data when we weren't in a game"));
 		return;
+	}
+
+	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the game end to the session log in all builds.
+	if (!isInShellGame())
+	{
+		const UnsignedInt seconds = getFrame() / LOGICFRAMES_PER_SECOND;
+		SessionLog::log("Game end at frame %u after %u:%2.2u of game time", getFrame(), seconds / 60, seconds % 60);
 	}
 
 	setClearingGameData( TRUE );
