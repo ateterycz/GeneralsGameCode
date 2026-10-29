@@ -271,6 +271,11 @@ struct LANMessage
 
 static_assert(sizeof(LANMessage) <= MAX_LANAPI_PACKET_SIZE, "LANMessage struct cannot be larger than the max packet size");
 
+// TheSuperHackers @security ateterycz 29/10/2026 Prepares a received LAN message for its handler. Returns FALSE for a message that
+// is shorter than a LAN message, because every client sends the whole message. Terminates the strings of the message, because a
+// message can leave them unterminated.
+Bool PrepareReceivedLANMessage( LANMessage *msg, Int length );
+
 // TheSuperHackers @bugfix ateterycz 29/10/2026 Tells whether the sender may announce the game with these slots. The host announces
 // its game, and the packet router announces a game in progress, which is another player of the game after the host left.
 Bool MayAnnounceGame( const GameSlot *const slots[MAX_SLOTS], UnsignedInt senderIP, Bool gameInProgress );

@@ -313,6 +313,59 @@ void LANAPI::checkMOTD()
 #endif
 }
 
+Bool PrepareReceivedLANMessage( LANMessage *msg, Int length )
+{
+	if (length < (Int)sizeof(LANMessage))
+	{
+		return FALSE;
+	}
+
+	msg->name[ARRAY_SIZE(msg->name) - 1] = 0;
+	msg->userName[ARRAY_SIZE(msg->userName) - 1] = 0;
+	msg->hostName[ARRAY_SIZE(msg->hostName) - 1] = 0;
+
+	// Only the strings of the message type are terminated, because the message types share their data.
+	switch (msg->messageType)
+	{
+		case LANMessage::MSG_GAME_ANNOUNCE:
+			msg->GameInfo.gameName[ARRAY_SIZE(msg->GameInfo.gameName) - 1] = 0;
+			msg->GameInfo.options[ARRAY_SIZE(msg->GameInfo.options) - 1] = 0;
+			break;
+		case LANMessage::MSG_REQUEST_JOIN:
+			msg->GameToJoin.serial[ARRAY_SIZE(msg->GameToJoin.serial) - 1] = 0;
+			break;
+		case LANMessage::MSG_JOIN_ACCEPT:
+			msg->GameJoined.gameName[ARRAY_SIZE(msg->GameJoined.gameName) - 1] = 0;
+			break;
+		case LANMessage::MSG_JOIN_DENY:
+			msg->GameNotJoined.gameName[ARRAY_SIZE(msg->GameNotJoined.gameName) - 1] = 0;
+			break;
+		case LANMessage::MSG_REQUEST_GAME_LEAVE:
+			msg->GameToLeave.gameName[ARRAY_SIZE(msg->GameToLeave.gameName) - 1] = 0;
+			break;
+		case LANMessage::MSG_SET_ACCEPT:
+			msg->Accept.gameName[ARRAY_SIZE(msg->Accept.gameName) - 1] = 0;
+			break;
+		case LANMessage::MSG_MAP_AVAILABILITY:
+			msg->MapStatus.gameName[ARRAY_SIZE(msg->MapStatus.gameName) - 1] = 0;
+			break;
+		case LANMessage::MSG_CHAT:
+			msg->Chat.gameName[ARRAY_SIZE(msg->Chat.gameName) - 1] = 0;
+			msg->Chat.message[ARRAY_SIZE(msg->Chat.message) - 1] = 0;
+			break;
+		case LANMessage::MSG_GAME_OPTIONS:
+			msg->GameOptions.options[ARRAY_SIZE(msg->GameOptions.options) - 1] = 0;
+			break;
+		case LANMessage::MSG_REQUEST_GAME_INFO:
+			msg->PlayerInfo.playerName[ARRAY_SIZE(msg->PlayerInfo.playerName) - 1] = 0;
+			break;
+		default:
+			break;
+	}
+
+	return TRUE;
+}
+
 extern Bool LANbuttonPushed;
 extern Bool LANSocketErrorDetected;
 void LANAPI::update()
@@ -352,6 +405,15 @@ void LANAPI::update()
 			}
 
 			LANMessage *msg = (LANMessage *)(m_transport->m_inBuffer[i].data);
+
+			// TheSuperHackers @security ateterycz 29/10/2026 Ignores a message that is shorter than a LAN message, and terminates its strings.
+			if (!PrepareReceivedLANMessage(msg, m_transport->m_inBuffer[i].length))
+			{
+				DEBUG_LOG(("LANAPI::update - ignoring a message of %d bytes from %d.%d.%d.%d", m_transport->m_inBuffer[i].length, PRINTF_IP_AS_4_INTS(senderIP)));
+				m_transport->m_inBuffer[i].length = 0;
+				continue;
+			}
+
 			//DEBUG_LOG(("LAN message type %s from %ls (%s@%s)", GetMessageTypeString(msg->messageType).str(),
 			//	msg->name, msg->userName, msg->hostName));
 			switch (msg->messageType)
