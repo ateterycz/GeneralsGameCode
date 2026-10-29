@@ -907,6 +907,13 @@ void NAT::gotMangledPort(Int nodeNumber, UnsignedShort mangledPort) {
 		return;
 	}
 
+	// TheSuperHackers @security ateterycz 29/10/2026 Checks the node number before the target node number indexes the connection
+	// nodes, because the target node number is -1 in a connection round without a target.
+	if (nodeNumber != m_targetNodeNumber) {
+		DEBUG_LOG(("NAT::gotMangledPort - got a mangled port number for someone that isn't my target. node = %d, target node = %d", nodeNumber, m_targetNodeNumber));
+		return;
+	}
+
 	GameSlot *targetSlot = m_slotList[m_connectionNodes[m_targetNodeNumber].m_slotIndex];
 	DEBUG_ASSERTCRASH(targetSlot != nullptr, ("NAT::gotMangledPort - targetSlot is null"));
 	if (targetSlot == nullptr) {
@@ -920,11 +927,6 @@ void NAT::gotMangledPort(Int nodeNumber, UnsignedShort mangledPort) {
 	if (localSlot == nullptr) {
 		DEBUG_LOG(("NAT::gotMangledPort - localSlot is null, failed this connection"));
 		setConnectionState(m_localNodeNumber, NATCONNECTIONSTATE_FAILED);
-		return;
-	}
-
-	if (nodeNumber != m_targetNodeNumber) {
-		DEBUG_LOG(("NAT::gotMangledPort - got a mangled port number for someone that isn't my target. node = %d, target node = %d", nodeNumber, m_targetNodeNumber));
 		return;
 	}
 
@@ -1118,15 +1120,19 @@ void NAT::processGlobalMessage(Int slotNum, const char *options) {
 		}
 */		Int node;
 		Int sendingNode;
-		sscanf(c, "%d %d\n", &node, &sendingNode);
+		// TheSuperHackers @security ateterycz 29/10/2026 Ignores a CONNDONE message without both node numbers, and checks the node
+		// number and the connection round before they index the connection pairs, because any player in the staging room can send it.
+		if (sscanf(c, "%d %d\n", &node, &sendingNode) != 2) {
+			DEBUG_LOG(("NAT::processGlobalMessage - got a CONNDONE message without node numbers"));
+			return;
+		}
 
-		if (m_connectionPairs[m_connectionPairIndex][m_connectionRound][node] == sendingNode) {
+		if ((node >= 0) && ((UnsignedInt)node < m_numNodes) && (m_connectionRound < ARRAY_SIZE(m_connectionPairs[0]))
+				&& (m_connectionPairs[m_connectionPairIndex][m_connectionRound][node] == sendingNode)) {
 //			Int node = atoi(ptr + strlen("CONNDONE"));
 			DEBUG_LOG(("NAT::processGlobalMessage - got a CONNDONE message for node %d", node));
-			if ((node >= 0) && (node <= m_numNodes)) {
-				DEBUG_LOG(("NAT::processGlobalMessage - node %d's connection is complete, setting connection state to done", node));
-				setConnectionState(node, NATCONNECTIONSTATE_DONE);
-			}
+			DEBUG_LOG(("NAT::processGlobalMessage - node %d's connection is complete, setting connection state to done", node));
+			setConnectionState(node, NATCONNECTIONSTATE_DONE);
 		} else {
 			DEBUG_LOG(("NAT::processGlobalMessage - got a connection done message that isn't from this round. node: %d sending node: %d", node, sendingNode));
 		}
@@ -1146,7 +1152,9 @@ void NAT::processGlobalMessage(Int slotNum, const char *options) {
 		// meant to be a phallic reference, you sicko.
 		const char *c = ptr + strlen("PORT");
 		Int node = atoi(c);
-		while (*c != ' ') {
+		// TheSuperHackers @security ateterycz 29/10/2026 Stops at the end of a PORT message without a space instead of reading past it,
+		// and ignores a PORT message without a port number and an internal address.
+		while (*c != '\0' && *c != ' ') {
 			++c;
 		}
 		while (*c == ' ') {
@@ -1154,7 +1162,10 @@ void NAT::processGlobalMessage(Int slotNum, const char *options) {
 		}
 		UnsignedInt intport = 0;
 		UnsignedInt addr = 0;
-		sscanf(c, "%d %X", &intport, &addr);
+		if (sscanf(c, "%d %X", &intport, &addr) != 2) {
+			DEBUG_LOG(("NAT::processGlobalMessage - got a PORT message without a port number and an internal address"));
+			return;
+		}
 		UnsignedShort port = (UnsignedShort)intport;
 
 		DEBUG_LOG(("NAT::processGlobalMessage - got port message from node %d, port: %d, internal address: %d.%d.%d.%d", node, port,
