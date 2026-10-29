@@ -546,7 +546,8 @@ ModuleData* ModuleFactory::newModuleDataFromINI(INI* ini, const AsciiString& nam
 {
 	char tmp[256];
 	tmp[0] = '0' + (int)type;
-	strcpy(&tmp[1], name.str());
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Truncates a module name that does not fit, which map.ini can define.
+	strlcpy(&tmp[1], name.str(), ARRAY_SIZE(tmp) - 1);
 	return TheNameKeyGenerator->nameToKey(tmp);
 }
 

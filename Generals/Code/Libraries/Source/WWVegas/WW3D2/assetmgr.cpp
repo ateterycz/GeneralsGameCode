@@ -765,6 +765,18 @@ bool WW3DAssetManager::Load_Prototype(ChunkLoadClass & cload)
 }
 
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Shortens the name so that the file name and its extension fit the buffer.
+// Previously a model name with more characters than the buffer, which map.ini can define, overflowed it.
+void WW3DAssetManager::Make_Render_Obj_Filename(char * filename, size_t filename_size, const char * name, const char * extension)
+{
+	const size_t extension_length = ::strlen(extension);
+	size_t name_length = ::strcspn(name, ".");
+	if (name_length + extension_length >= filename_size)
+		name_length = filename_size - extension_length - 1;
+	snprintf(filename, filename_size, "%.*s%s", (int)name_length, name, extension);
+}
+
+
 /***********************************************************************************************
  * WW3DAssetManager::Create_Render_Obj -- Create a render object for the user                  *
  *                                                                                             *
@@ -793,13 +805,8 @@ RenderObjClass * WW3DAssetManager::Create_Render_Obj(const char * name)
 		AssetStatusClass::Peek_Instance()->Report_Load_On_Demand_RObj(name);
 
 		char filename [MAX_PATH];
-		const char *mesh_name = ::strchr (name, '.');
-		if (mesh_name != nullptr) {
-			::lstrcpyn (filename, name, (int)(mesh_name - name) + 1);
-			::lstrcat (filename, ".w3d");
-		} else {
-			snprintf( filename, ARRAY_SIZE(filename), "%s.w3d", name);
-		}
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Bounds the file name by its buffer, which a long model name overflowed.
+		Make_Render_Obj_Filename(filename, ARRAY_SIZE(filename), name, ".w3d");
 
 		// If we can't find it, try the parent directory
 		if ( Load_3D_Assets( filename ) == false ) {

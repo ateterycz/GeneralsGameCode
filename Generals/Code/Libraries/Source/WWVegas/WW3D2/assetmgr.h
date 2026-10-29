@@ -231,6 +231,13 @@ public:
 	virtual RenderObjClass *		Create_Render_Obj(const char * name);
 
 	/*
+	** Write the name of the file that loads a render object on demand: the name of the render object up to
+	** its first '.', followed by the extension.
+	*/
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Shorten the name so that the file name and its extension fit the buffer.
+	static void							Make_Render_Obj_Filename(char * filename, size_t filename_size, const char * name, const char * extension);
+
+	/*
 	** query if there is a render object with the specified name
 	*/
 	virtual bool						Render_Obj_Exists(const char * name);

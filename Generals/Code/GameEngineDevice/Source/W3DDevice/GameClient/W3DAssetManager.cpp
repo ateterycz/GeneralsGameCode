@@ -745,14 +745,8 @@ RenderObjClass * W3DAssetManager::Create_Render_Obj(
 	{
 		// If we didn't find one, try to load on demand
 		char filename [MAX_PATH];
-		const char *mesh_name = strchr (name, '.');
-		if (mesh_name != nullptr)
-		{
-			lstrcpyn(filename, name, (int)(mesh_name - name) + 1);
-			lstrcat(filename, ".w3d");
-		} else {
-			snprintf( filename, ARRAY_SIZE(filename), "%s.w3d", name);
-		}
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Bounds the file name by its buffer, which a long model name overflowed.
+		Make_Render_Obj_Filename(filename, ARRAY_SIZE(filename), name, ".w3d");
 
 		// If we can't find it, try the parent directory
 		if ( Load_3D_Assets( filename ) == false )
@@ -1354,16 +1348,9 @@ RenderObjClass * W3DAssetManager::Create_Render_Obj(const char * name,float scal
 	if (WW3D_Load_On_Demand && proto == nullptr) {
 		// If we didn't find one, try to load on demand
 		char filename [MAX_PATH];
-		char *mesh_name = ::strchr (name, '.');
-		if (mesh_name != nullptr) {
-			::lstrcpyn (filename, name, ((int)mesh_name) - ((int)name) + 1);
-			if (isGranny)
-				::lstrcat (filename, ".gr2");
-			else
-				::lstrcat (filename, ".w3d");
-		} else {
-			sprintf( filename, "%s.w3d", name);
-		}
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Bounds the file name by its buffer, which a long model name overflowed.
+		// The extension always fits, so the '.' that the '.gr2' below replaces is in the buffer.
+		Make_Render_Obj_Filename(filename, ARRAY_SIZE(filename), name, isGranny ? ".gr2" : ".w3d");
 
 		// If we can't find it, try the parent directory
 		if ( Load_3D_Assets( filename ) == false ) {

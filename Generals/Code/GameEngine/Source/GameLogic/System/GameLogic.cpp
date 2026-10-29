@@ -4217,7 +4217,8 @@ void GameLogic::setControlBarOverride(const AsciiString& commandSetName, Int slo
 {
 	char buf[256];
 	buf[0] = '0' + slot;
-	strcpy(&buf[1], commandSetName.str());
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Truncates a command set name that does not fit, which map.ini can define.
+	strlcpy(&buf[1], commandSetName.str(), ARRAY_SIZE(buf) - 1);
 	m_controlBarOverrides[buf] = commandButton;
 }
 
@@ -4226,7 +4227,8 @@ Bool GameLogic::findControlBarOverride(const AsciiString& commandSetName, Int sl
 {
 	char buf[256];
 	buf[0] = '0' + slot;
-	strcpy(&buf[1], commandSetName.str());
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Truncates a command set name that does not fit, which map.ini can define.
+	strlcpy(&buf[1], commandSetName.str(), ARRAY_SIZE(buf) - 1);
 
 	ControlBarOverrideMap::const_iterator it = m_controlBarOverrides.find(buf);
 	if (it != m_controlBarOverrides.end())
