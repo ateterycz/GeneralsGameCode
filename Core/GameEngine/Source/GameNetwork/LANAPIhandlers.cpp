@@ -464,7 +464,17 @@ void LANAPI::handleJoinAccept( LANMessage *msg, UnsignedInt senderIP )
 	{
 		if (m_pendingAction == ACT_JOIN) // Are we trying to join?
 		{
-			m_currentGame = LookupGame(UnicodeString(msg->GameJoined.gameName));
+			LANGameInfo *game = LookupGame(UnicodeString(msg->GameJoined.gameName));
+
+			// TheSuperHackers @bugfix ateterycz 29/10/2026 Ignores a join accept that is not from the host of the game, so that nobody
+			// else can put us into the game.
+			if (game && game->getHostIP() != senderIP)
+			{
+				DEBUG_LOG(("LANAPI::handleJoinAccept - ignoring a join accept from %d.%d.%d.%d, which is not the host of the game", PRINTF_IP_AS_4_INTS(senderIP)));
+				return;
+			}
+
+			m_currentGame = game;
 
 			if (!m_currentGame)
 			{
