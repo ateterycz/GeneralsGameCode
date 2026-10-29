@@ -217,7 +217,11 @@ public:
 	virtual void closeOpenSlots();						///< close all slots that are currently unoccupied.
 
 	// CRC checking hack
-	void setCRCInterval( Int val ) { m_crcInterval = (val<100)?val:100; }
+	// TheSuperHackers @security ateterycz 29/10/2026 Clamps the CRC interval to at least 1 frame, because an interval of 0 divides by
+	// zero and a negative interval disables the CRC checks. The game options and the replay header set the interval through here,
+	// so every client and every replay clamps the interval of the host alike.
+	static Int clampCRCInterval( Int val ) { return (val < 1) ? 1 : ((val < 100) ? val : 100); }
+	void setCRCInterval( Int val ) { m_crcInterval = clampCRCInterval(val); }
 	Int getCRCInterval() const { return m_crcInterval; }
 
 	Bool haveWeSurrendered() { return m_surrendered; }
