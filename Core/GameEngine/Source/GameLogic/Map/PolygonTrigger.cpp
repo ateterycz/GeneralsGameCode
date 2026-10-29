@@ -167,6 +167,11 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 		}
 
 		numPoints = file.readInt();
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the chunk is too short for the number of points, before they are allocated.
+		// Each point takes three Ints.
+		if (numPoints < 0 || (UnsignedInt)numPoints > file.getChunkDataSizeLeft() / (3 * sizeof(Int))) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		PolygonTrigger *pTrig = newInstance(PolygonTrigger)(numPoints+1);
 		pTrig->setTriggerName(triggerName);
 		if (info->version >= K_TRIGGERS_VERSION_4) {
