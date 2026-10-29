@@ -306,6 +306,21 @@ static void queuePatch(Bool mandatory, AsciiString downloadURL)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+char *NewHTTPTextBuffer( Bool succeeded, const char *buffer, Int bufferLen )
+{
+	if (!succeeded || buffer == nullptr || bufferLen < 0)
+	{
+		return nullptr;
+	}
+
+	char *text = NEW char[bufferLen + 1];
+	memcpy(text, buffer, bufferLen);
+	text[bufferLen] = 0;
+	return text;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
 static GHTTPBool motdCallback( GHTTPRequest request, GHTTPResult result,
 															char * buffer, GHTTPByteCount bufferLen, void * param )
 {
@@ -316,10 +331,10 @@ static GHTTPBool motdCallback( GHTTPRequest request, GHTTPResult result,
 		return GHTTPTrue;
 	}
 
+	// TheSuperHackers @security ateterycz 29/10/2026 Keeps no MOTD from a failed request, and terminates the MOTD after its last
+	// byte. An empty response wrote before the buffer.
 	delete[] MOTDBuffer;
-	MOTDBuffer = NEW char[bufferLen];
-	memcpy(MOTDBuffer, buffer, bufferLen);
-	MOTDBuffer[bufferLen-1] = 0;
+	MOTDBuffer = NewHTTPTextBuffer(result == GHTTPSuccess, buffer, (Int)bufferLen);
 
 	--checksLeftBeforeOnline;
 	DEBUG_ASSERTCRASH(checksLeftBeforeOnline>=0, ("Too many callbacks"));

@@ -63,3 +63,7 @@ void HandleOverallStats( const char* szHTTPStats, unsigned len );
 
 void CheckNumPlayersOnline();
 void HandleNumPlayersOnline( Int numPlayersOnline );
+
+// TheSuperHackers @security ateterycz 29/10/2026 Returns a new NUL-terminated copy of the text of a successful HTTP request, or null
+// if the request failed.
+char *NewHTTPTextBuffer( Bool succeeded, const char *buffer, Int bufferLen );
