@@ -5,6 +5,7 @@ set(COREI_GOOGLETEST_SRC
     GameEngine/Common/FileSystemTest.cpp
     GameEngine/Common/FileSystemTestFixture.h
     GameEngine/Common/INITest.cpp
+    GameEngine/Common/RecorderTest.cpp
     GameEngine/Common/SessionLogTest.cpp
     GameEngine/Common/SimulationMathCrcTest.cpp
     GameEngine/GameClient/DisplayStringDummyTest.cpp

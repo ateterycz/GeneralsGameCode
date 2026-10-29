@@ -191,8 +191,9 @@ protected:
 	void logGameStart(AsciiString options);
 	void logGameEnd();
 
-	AsciiString readAsciiString();										///< Read the next string from m_file using ascii characters.
-	UnicodeString readUnicodeString();								///< Read the next string from m_file using unicode characters.
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Take the file to read from, so that tests can read strings without a recorder.
+	static AsciiString readAsciiString(File *file);						///< Read the next string from the file using ascii characters.
+	static UnicodeString readUnicodeString(File *file);				///< Read the next string from the file using unicode characters.
 	void readNextFrame();															///< Read and validate the next frame number to execute a command on.
 	void appendNextCommand();													///< Read the next GameMessage and append it to TheCommandList.
 	void writeArgument(GameMessageArgumentDataType type, const GameMessageArgumentType arg);

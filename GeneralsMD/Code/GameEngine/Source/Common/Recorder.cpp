@@ -892,20 +892,20 @@ Bool RecorderClass::readReplayHeader(ReplayHeader& header, const AsciiString& fi
 	}
 
 	// Read the Replay Name.  We don't actually do anything with it.  Oh well.
-	header.replayName = readUnicodeString();
+	header.replayName = readUnicodeString(m_file);
 
 	// Read the date and time.  We don't really do anything with this either. Oh well.
 	m_file->read(&header.timeVal, sizeof(header.timeVal));
 
 	// Read in the Version info
-	header.versionString = readUnicodeString();
-	header.versionTimeString = readUnicodeString();
+	header.versionString = readUnicodeString(m_file);
+	header.versionTimeString = readUnicodeString(m_file);
 	m_file->read(&header.versionNumber, sizeof(header.versionNumber));
 	m_file->read(&header.exeCRC, sizeof(header.exeCRC));
 	m_file->read(&header.iniCRC, sizeof(header.iniCRC));
 
 	// Read in the GameInfo
-	header.gameOptions = readAsciiString();
+	header.gameOptions = readAsciiString(m_file);
 	m_gameInfo.reset();
 	m_gameInfo.enterGame();
 	DEBUG_LOG(("RecorderClass::readReplayHeader - GameInfo = %s", header.gameOptions.str()));
@@ -918,7 +918,7 @@ Bool RecorderClass::readReplayHeader(ReplayHeader& header, const AsciiString& fi
 	}
 	m_gameInfo.startGame(0);
 
-	AsciiString playerIndex = readAsciiString();
+	AsciiString playerIndex = readAsciiString(m_file);
 	header.localPlayerIndex = atoi(playerIndex.str());
 	if (header.localPlayerIndex < -1 || header.localPlayerIndex >= MAX_SLOTS)
 	{
@@ -1276,24 +1276,31 @@ Bool RecorderClass::playbackFile(AsciiString filename)
 /**
  * Read a unicode string from the current file position. The string is assumed to be 0-terminated.
  */
-UnicodeString RecorderClass::readUnicodeString() {
+UnicodeString RecorderClass::readUnicodeString(File *file) {
 	WideChar str[1024] = L"";
 	Int index = 0;
 
-	Int c = m_file->readWideChar();
+	Int c = file->readWideChar();
 	if (c == EOF) {
 		str[index] = 0;
 	}
 	str[index] = c;
 
-	while (index < 1024 && str[index] != 0) {
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Stores at most 1023 characters, so that the terminator fits, and skips the
+	// rest of a longer string up to its terminator or the end of the file. Previously a longer string wrote past the buffer.
+	while (index < 1023 && str[index] != 0) {
 		++index;
-		Int c = m_file->readWideChar();
+		Int c = file->readWideChar();
 		if (c == EOF) {
 			str[index] = 0;
 			break;
 		}
 		str[index] = c;
+	}
+	if (index == 1023 && str[index] != 0) {
+		do {
+			c = file->readWideChar();
+		} while (c != 0 && c != EOF && c != WEOF);
 	}
 	str[1023] = L'\0';
 
@@ -1304,24 +1311,31 @@ UnicodeString RecorderClass::readUnicodeString() {
 /**
  * Read an ascii string from the current file position. The string is assumed to be 0-terminated.
  */
-AsciiString RecorderClass::readAsciiString() {
+AsciiString RecorderClass::readAsciiString(File *file) {
 	char str[1024] = "";
 	Int index = 0;
 
-	Int c =	m_file->readChar();
+	Int c =	file->readChar();
 	if (c == EOF) {
 		str[index] = 0;
 	}
 	str[index] = c;
 
-	while (index < 1024 && str[index] != 0) {
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Stores at most 1023 characters, so that the terminator fits, and skips the
+	// rest of a longer string up to its terminator or the end of the file. Previously a longer string wrote past the buffer.
+	while (index < 1023 && str[index] != 0) {
 		++index;
-		Int c = m_file->readChar();
+		Int c = file->readChar();
 		if (c == EOF) {
 			str[index] = 0;
 			break;
 		}
 		str[index] = c;
+	}
+	if (index == 1023 && str[index] != 0) {
+		do {
+			c = file->readChar();
+		} while (c != 0 && c != EOF);
 	}
 	str[1023] = '\0';
 
