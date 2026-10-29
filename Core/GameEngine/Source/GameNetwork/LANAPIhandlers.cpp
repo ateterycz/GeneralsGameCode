@@ -99,6 +99,18 @@ void LANAPI::handleRequestLocations( LANMessage *msg, UnsignedInt senderIP )
 	OnNameChange(player->getIP(), player->getName());
 }
 
+Bool MayAnnounceGame( const GameSlot *const slots[MAX_SLOTS], UnsignedInt senderIP, Bool gameInProgress )
+{
+	for (Int i = 0; i < MAX_SLOTS; ++i)
+	{
+		if ((i == 0 || gameInProgress) && slots[i] && slots[i]->isPlayer(senderIP))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 void LANAPI::handleGameAnnounce( LANMessage *msg, UnsignedInt senderIP )
 {
 	if (senderIP == m_localIP)
@@ -109,12 +121,29 @@ void LANAPI::handleGameAnnounce( LANMessage *msg, UnsignedInt senderIP )
 	{
 		return; // Don't care about games if we're playing
 	}
-	else if (senderIP == m_directConnectRemoteIP)
+
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Ignores a game announce for the current game, which the game options of its host
+	// keep up to date, and a game announce for a known game from a sender that may not announce it. This way another host with the
+	// same game name cannot delete the game or take it over, and the first game with a name stays.
+	LANGameInfo *game = LookupGame(UnicodeString(msg->GameInfo.gameName));
+	if (game)
+	{
+		const GameSlot *slots[MAX_SLOTS];
+		for (Int i = 0; i < MAX_SLOTS; ++i)
+		{
+			slots[i] = game->getConstSlot(i);
+		}
+		if (game == m_currentGame || !MayAnnounceGame(slots, senderIP, game->isGameInProgress()))
+		{
+			return;
+		}
+	}
+
+	if (senderIP == m_directConnectRemoteIP)
 	{
 
 		if (m_currentGame == nullptr)
 		{
-			LANGameInfo *game = LookupGame(UnicodeString(msg->GameInfo.gameName));
 			if (!game)
 			{
 				game = NEW LANGameInfo;
@@ -137,7 +166,6 @@ void LANAPI::handleGameAnnounce( LANMessage *msg, UnsignedInt senderIP )
 	}
 	else
 	{
-		LANGameInfo *game = LookupGame(UnicodeString(msg->GameInfo.gameName));
 		if (!game)
 		{
 			game = NEW LANGameInfo;

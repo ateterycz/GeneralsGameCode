@@ -8,6 +8,7 @@ set(COREI_GOOGLETEST_SRC
     GameEngine/Common/SessionLogTest.cpp
     GameEngine/Common/SimulationMathCrcTest.cpp
     GameEngine/GameClient/DisplayStringDummyTest.cpp
+    GameEngine/GameNetwork/LANAPITest.cpp
     GameEngine/GameNetwork/NetCommandWrapperListTest.cpp
     GameEngine/GameNetwork/NetPacketStructsTest.cpp
     GameEngine/GameNetwork/NetPacketTest.cpp

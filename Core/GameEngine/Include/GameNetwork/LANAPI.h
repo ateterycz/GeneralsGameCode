@@ -271,6 +271,10 @@ struct LANMessage
 
 static_assert(sizeof(LANMessage) <= MAX_LANAPI_PACKET_SIZE, "LANMessage struct cannot be larger than the max packet size");
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Tells whether the sender may announce the game with these slots. The host announces
+// its game, and the packet router announces a game in progress, which is another player of the game after the host left.
+Bool MayAnnounceGame( const GameSlot *const slots[MAX_SLOTS], UnsignedInt senderIP, Bool gameInProgress );
+
 
 /**
  * The LANAPI class is used to instantiate a singleton which
