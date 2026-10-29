@@ -17,6 +17,7 @@
 */
 
 #include <gtest/gtest.h>
+#include <climits>
 #include <string>
 #include <vector>
 
@@ -212,6 +213,18 @@ TEST_F(DataChunkInputTest, ThrowsOnChildChunkHeaderPastEndOfParent)
 	file.openDataChunk(&version);
 	file.readInt();
 	expectCorruptFileFormat([&] { file.openDataChunk(&version); });
+}
+
+TEST_F(DataChunkInputTest, StopsTableOfContentsAtEndOfFile)
+{
+	// The table of contents states more symbols than the file has.
+	std::string content = tableOfContents({"Data"});
+	const Int count = INT_MAX;
+	content.replace(4, sizeof(count), reinterpret_cast<const char *>(&count), sizeof(count));
+	open(content);
+
+	DataChunkInput file(&m_stream);
+	EXPECT_FALSE(file.isValidFileType());
 }
 
 TEST_F(DataChunkInputTest, ThrowsWhenParserReadsPastEndOfChunk)

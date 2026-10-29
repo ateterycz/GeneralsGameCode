@@ -563,6 +563,10 @@ void DataChunkTableOfContents::read( ChunkInputStream &s)
 		// track max ID used
 		if (m->id > maxID)
 			maxID = m->id;
+
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Stops at the end of the file, so that a corrupt symbol count cannot allocate symbols without end.
+		if (s.eof())
+			break;
 	}
 	m_headerOpened = count > 0 && !s.eof();
 
