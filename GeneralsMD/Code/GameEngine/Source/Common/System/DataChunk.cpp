@@ -37,6 +37,13 @@
 // If verbose, lots of debug logging.
 #define not_VERBOSE
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 The height and tile data of a map take about 9 bytes per cell,
+// so 16 bytes per cell of the largest map leave room for its objects and scripts.
+static Bool isPlausibleUncompressedMapSize(Int size)
+{
+	return size > 0 && size <= 16 * MAX_MAP_AREA;
+}
+
 CachedFileInputStream::CachedFileInputStream():m_buffer(nullptr),m_size(0)
 {
 }
@@ -64,6 +71,12 @@ Bool CachedFileInputStream::open(AsciiString path)
 	if (CompressionManager::isDataCompressed(m_buffer, m_size) == 0)
 	{
 		//DEBUG_LOG(("CachedFileInputStream::open() - file %s is uncompressed at %d bytes!", path.str(), m_size));
+	}
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Keeps the compressed data, as when the decompression fails,
+	// instead of allocating an uncompressed size from the file header that no map has.
+	else if (!isPlausibleUncompressedMapSize(CompressionManager::getUncompressedSize(m_buffer, m_size)))
+	{
+		DEBUG_LOG(("CachedFileInputStream::open() - file %s states an implausible uncompressed size", path.str()));
 	}
 	else
 	{

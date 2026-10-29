@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "Common/DataChunk.h"
+#include "Compression.h"
 
 #include "DataChunkTestFixture.h"
 
@@ -237,4 +238,49 @@ TEST_F(DataChunkInputTest, ThrowsWhenParserReadsPastEndOfChunk)
 	std::vector<Int> values;
 	expectCorruptFileFormat([&] { file.parse(&values); });
 	EXPECT_TRUE(values.empty());
+}
+
+class CachedFileInputStreamTest : public DataChunkTestFixture
+{
+};
+
+TEST_F(CachedFileInputStreamTest, ReadsCompressedMap)
+{
+	// The data repeats, so that it compresses to less than its size.
+	std::string data;
+	append<Int>(data, 42);
+	data += std::string(1024, 'x');
+	const std::string map = tableOfContents({"Data"}) + chunk(1, data);
+	const CompressionType type = CompressionManager::getPreferredCompression();
+	std::string compressed(CompressionManager::getMaxCompressedSize(static_cast<Int>(map.size()), type), '\0');
+	compressed.resize(CompressionManager::compressData(type, const_cast<char *>(map.data()), static_cast<Int>(map.size()),
+		&compressed[0], static_cast<Int>(compressed.size())));
+	ASSERT_TRUE(CompressionManager::isDataCompressed(compressed.data(), static_cast<Int>(compressed.size())));
+	ASSERT_LT(compressed.size(), map.size());
+	open(compressed);
+
+	DataChunkInput file(&m_stream);
+	DataChunkVersionType version;
+	EXPECT_EQ(file.openDataChunk(&version), "Data");
+	EXPECT_EQ(file.getChunkDataSize(), data.size());
+	EXPECT_EQ(file.readInt(), 42);
+}
+
+// The uncompressed size in the header of a compressed file comes from the file.
+TEST_F(CachedFileInputStreamTest, KeepsCompressedDataWithImplausibleUncompressedSize)
+{
+	for (const Int uncompressedSize : {-1, 0, INT_MAX})
+	{
+		SCOPED_TRACE(uncompressedSize);
+		std::string content("EAR", 4);
+		append<Int>(content, uncompressedSize);
+		content += "payload";
+		writeLooseFile("test.map", content);
+
+		CachedFileInputStream stream;
+		ASSERT_TRUE(stream.open("test.map"));
+		std::string read(64, '\0');
+		read.resize(stream.read(&read[0], static_cast<Int>(read.size())));
+		EXPECT_EQ(read, content);
+	}
 }
