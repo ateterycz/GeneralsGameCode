@@ -284,3 +284,19 @@ TEST_F(WorldHeightMapTest, ThrowsOnTimeOfDayOutsideOfLightingArrays)
 	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(BlendTiles()) + globalLighting(-1)); });
 	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(BlendTiles()) + globalLighting(TIME_OF_DAY_COUNT)); });
 }
+
+TEST_F(WorldHeightMapTest, ThrowsOnBlendTileDataBeforeHeightMap)
+{
+	// The blend tile data matches the empty height map before the height map is read.
+	expectCorruptFileFormat([&] { load(blendTileData(BlendTiles(), 0) + heightMap()); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnSecondHeightMap)
+{
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(BlendTiles()) + heightMap(4)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnHeightMapWithoutBlendTileData)
+{
+	expectCorruptFileFormat([&] { load(heightMap()); });
+}

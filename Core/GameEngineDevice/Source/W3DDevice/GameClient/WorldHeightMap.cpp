@@ -517,6 +517,10 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *pStrm, Bool logicalDataOnly):
 	}
 	// patch bad maps.
 	if (!logicalDataOnly) {
+		// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when a height map has no blend tile data.
+		if (m_dataSize > 0 && m_tileNdxes == nullptr) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		for(i=0; i<m_dataSize; i++) {
 			if (m_cliffInfoNdxes[i]<0 || m_cliffInfoNdxes[i]>= m_numCliffInfo) {
 				m_cliffInfoNdxes[i] = 0;
@@ -924,6 +928,11 @@ Bool WorldHeightMap::ParseHeightMapDataChunk(DataChunkInput &file, DataChunkInfo
 */
 Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws on a second height map, because the blend tile data has the size of the first one.
+	if (m_data != nullptr) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
+
 	m_width = file.readInt();
 	m_height = file.readInt();
 	if (info->version >= K_HEIGHT_MAP_VERSION_3) {
@@ -1132,6 +1141,10 @@ void WorldHeightMap::readTexClass(TXTextureClass *texClass, TileData **tileData)
 Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
 	int i, j;
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the blend tile data comes before the height map, because it must have the size of the height map.
+	if (m_data == nullptr) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
 	Int len = file.readInt();
 	if (m_dataSize != len) {
 		throw ERROR_CORRUPT_FILE_FORMAT	;
