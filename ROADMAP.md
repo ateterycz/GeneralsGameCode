@@ -2,8 +2,8 @@
 
 This roadmap orders the work for this fork (ateterycz/GeneralsGameCode) toward the goals in the README: fix critical
 bugs, modernize the codebase and improve the engine. Multiplayer must keep working both peer-to-peer (LAN and direct
-connect) and on the existing online infrastructure (community servers that emulate GameSpy, such as C&C:Online),
-alongside retail Zero Hour 1.04 and Generals 1.08 clients.
+connect) and on the existing online infrastructure (see Phase 2 for where that is now), alongside retail Zero Hour 1.04
+and Generals 1.08 clients.
 
 It is based on a review of the code on 29/10/2026 and on the open upstream issues. Items are numbered by area (N, L, M,
 C, O, D, K, T, P, X). Upstream issues are linked in full.
@@ -25,7 +25,7 @@ C, O, D, K, T, P, X). Upstream issues are linked in full.
   every line submits it, and the use of AI is disclosed. A branch for upstream must start from `upstream/main`, so
   that it doesn't carry fork-only commits such as the GeneralsGamePatch submodule.
 
-## Phase 1: Harden every untrusted input (first batch done on local main)
+## Phase 1: Harden every untrusted input (first batch done, follow-ups open)
 
 In peer-to-peer play every other player, and every shared map or replay, is untrusted input. These fixes are small, do
 not affect compatibility (an honest retail client never sends the rejected values) and can be unit tested, so they come
@@ -89,7 +89,8 @@ and C1 to C3 are done as well (M6 is covered by M1's chunk bounds), each with un
 
 **Disclosure.** Many of these bugs can be triggered remotely, and they also exist in the client that most online players
 use today (see Phase 2). `SECURITY.md` asks for vulnerabilities to be reported privately to TheSuperHackers before they
-are made public. Report them that way before pushing these commits or this roadmap to the public fork.
+are made public. These commits and this roadmap were pushed to the public fork on 29/10/2026 before that report was
+sent, so sending it (O1) is the first open step.
 
 ## Phase 2: Online on the existing infrastructure
 
@@ -112,7 +113,7 @@ A client built from this repo can't go online through GameSpy either:
 
 | Item | Work | Verify |
 |---|---|---|
-| O1 | Get the Phase 1 fixes to the players who are online today: report them privately to TheSuperHackers, whose code Generals Online merges, and to the Generals Online team. A human has to do this; `AI_POLICY.md` doesn't let agents submit. | Fixes land upstream or in Generals Online |
+| O1 | Get the Phase 1 fixes to the players who are online today: report them privately to TheSuperHackers, whose code Generals Online merges, and to the Generals Online team. A human has to do this; `AI_POLICY.md` doesn't let agents submit. Not sent yet on 29/10/2026. | Fixes land upstream or in Generals Online |
 | O2 | Decide the fork's own online strategy (see below) | Decision |
 | O3 | For GameSpy emulating servers, including self-hosted ones: bring in [upstream PR 3166](https://github.com/TheSuperHackers/GeneralsGameCode/pull/3166) with fixes. It runs the availability check, adds a configurable server host, replaces the SNMP lookup that frees stack memory (the likely cause of [upstream issue 91](https://github.com/TheSuperHackers/GeneralsGameCode/issues/91)) and fixes the host name lifetime. It still needs these fixes: a servserv 404 must not block going online, the host name must be validated with `inet_addr` instead of "starts with a digit", and host names longer than 63 characters must be rejected. | Build, unit tests, log in against a GameSpy emulator |
 
@@ -145,7 +146,7 @@ already records mismatches, but not what differed.
 
 | Item | Work |
 |---|---|
-| D1 | On a mismatch, dump the CRC of each subsystem (objects, players, AI, scripts, partitions, random seeds) for the mismatch frame to the session log, so that two players' logs can be compared. Also log the INI CRC at game start: players with and without the community patch differ only in it. |
+| D1 | On a mismatch, dump the CRC of each subsystem (objects, players, AI, scripts, partitions, random seeds) for the mismatch frame to the session log, so that two players' logs can be compared. The INI CRC is logged at game start already (commit 4dbc672f0): players with and without the community patch differ only in it. |
 | D2 | Add the remaining script engine state to the CRC (it's only partly covered now) and add the math CRC to the VC6 lobby |
 | D3 | `map.ini` is not in the INI CRC, which is computed once at startup, and the community patch edits the map.ini of 57 official maps. Recheck the map.ini mismatches ([upstream issue 2016](https://github.com/TheSuperHackers/GeneralsGameCode/issues/2016) and its related issues) once D1 can show what differs. |
 | D4 | W3D models are in no CRC ([upstream issue 84](https://github.com/TheSuperHackers/GeneralsGameCode/issues/84)). The GeneralsGamePatch submodule has 55 bug repro maps for these cases (for example `Maps/Any/!TestGermanTerroristMismatch`). |
@@ -181,6 +182,15 @@ results fails a test.
 | X1 | Look up command sets by name through an index instead of a list of string compares. The lookup is called from AI code too. | None, same pointer |
 | X2 | The special power shortcut bar scans all objects twice per button every frame | None, client only |
 | X3 | Pathfinder open list ([upstream issue 100](https://github.com/TheSuperHackers/GeneralsGameCode/issues/100)). Contribute a measurement harness to the upstream skip list work instead of a competing algorithm. | `RETAIL_COMPATIBLE_PATHFINDING` |
+
+## Other work on main
+
+- Upstream [PR 3458](https://github.com/TheSuperHackers/GeneralsGameCode/pull/3458) (archive subdirectory listing) and
+  [PR 3460](https://github.com/TheSuperHackers/GeneralsGameCode/pull/3460) (extra string files next to the string
+  table) are brought in. Together they fix the missing Custom Mission label on the Steam install. Both are still open
+  upstream; when they merge, take upstream's version. C5 comes from PR 3460.
+- The `Patch*.big` archives load before the other archives, like the Steam 1.05 executable (commit 4eac2bd73), so the
+  Custom Mission button joins the cascade of the other main menu buttons. The INI CRC is unchanged.
 
 ## Tooling and CI for the fork
 
