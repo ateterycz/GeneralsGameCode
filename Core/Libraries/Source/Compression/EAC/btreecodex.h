@@ -37,11 +37,9 @@ bool        GCALL BTREE_is(const void *compresseddata);
 /* Decode Functions */
 
 int        GCALL BTREE_size(const void *compresseddata);
-#ifdef __cplusplus
-int        GCALL BTREE_decode(void *dest, const void *compresseddata, int *compressedsize=0);
-#else
-int        GCALL BTREE_decode(void *dest, const void *compresseddata, int *compressedsize);
-#endif
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Takes the sizes of the destination and the compressed data. Returns 0 when the
+// data is malformed, ends early or decodes to more than destsize or to another size than its header states.
+int        GCALL BTREE_decode(void *dest, int destsize, const void *compresseddata, int compressedsize);
 
 /* Encode Functions */
 

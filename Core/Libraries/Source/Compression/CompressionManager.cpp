@@ -277,7 +277,8 @@ Int CompressionManager::compressData( CompressionType compType, void *srcVoid, I
 
 Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoid, Int destLen )
 {
-	if (srcLen < 8)
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on a negative destination size, which zlib and LZHL take as huge.
+	if (srcLen < 8 || destLen < 0)
 		return 0;
 
 	UnsignedByte *src = (UnsignedByte *)srcVoid;
@@ -285,10 +286,12 @@ Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoi
 
 	CompressionType compType = getCompressionType(src, srcLen);
 
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Passes the sizes of the source and the destination to the decoders, so that
+	// data that decodes to more than its header states fails instead of overflowing the destination.
 	if (compType == COMPRESSION_BTREE)
 	{
 		Int slen = srcLen - 8;
-		Int ret = BTREE_decode(dest, src+8, &slen);
+		Int ret = BTREE_decode(dest, destLen, src+8, slen);
 		if (ret)
 			return ret;
 		else
@@ -297,7 +300,7 @@ Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoi
 	if (compType == COMPRESSION_HUFF)
 	{
 		Int slen = srcLen - 8;
-		Int ret = HUFF_decode(dest, src+8, &slen);
+		Int ret = HUFF_decode(dest, destLen, src+8, slen);
 		if (ret)
 			return ret;
 		else
@@ -306,7 +309,7 @@ Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoi
 	if (compType == COMPRESSION_REFPACK)
 	{
 		Int slen = srcLen - 8;
-		Int ret = REF_decode(dest, src+8, &slen);
+		Int ret = REF_decode(dest, destLen, src+8, slen);
 		if (ret)
 			return ret;
 		else

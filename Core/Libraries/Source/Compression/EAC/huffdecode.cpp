@@ -46,10 +46,27 @@ struct HuffDecodeContext
 
 static int ZERO=0;
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Reads zeros past the end of the compressed data, as far as the 32 bit buffer
+// reads ahead of the last bit of a valid stream, and fails beyond.
+#define HUFF_READAHEAD 4
+#define HUFF_SOURCEBYTE(i) ((i) < packsize ? (unsigned int) packbuf[i] : 0u)
+
 #define GET16BITS() \
-    bitsunshifted =  qs[0] | (bitsunshifted << 8);\
-    bitsunshifted =  qs[1] | (bitsunshifted << 8);\
-    qs += 2;
+    if (qpos > packsize+HUFF_READAHEAD-2)\
+        goto huff_fail;\
+    bitsunshifted =  HUFF_SOURCEBYTE(qpos) | (bitsunshifted << 8);\
+    bitsunshifted =  HUFF_SOURCEBYTE(qpos+1) | (bitsunshifted << 8);\
+    qpos += 2;
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Fails instead of writing past the decoded size of the header.
+#define HUFF_PUT(c) \
+    if (qd >= qdend)\
+        goto huff_fail;\
+    *qd++ = (c);
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on numbers of more than 30 bits, which the encoder never writes and
+// whose shifts are undefined, so that a run of zero bits cannot loop forever.
+#define HUFF_MAXNUMBITS 30
 
 
 #define SQgetbits(v,n)\
@@ -98,6 +115,8 @@ static int ZERO=0;
             n=2;\
             do\
             {\
+                if (n>=HUFF_MAXNUMBITS)\
+                    goto huff_fail;\
                 ++n;\
                 SQgetbits(v,1);\
             }\
@@ -134,7 +153,8 @@ static int ZERO=0;
     }\
 }\
 
-static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Checks the code tables against their arrays and every code against the tables.
+static int HUFF_decompress(unsigned char *packbuf, int packsize, unsigned char *unpackbuf, int unpacksize)
 {
     unsigned int    type;
     unsigned char   clue;
@@ -142,22 +162,27 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
     unsigned int    cmp;
     int             bitnum=0;
     int             cluelen=0;
-    unsigned char   *qs;
+    int             qpos;
     unsigned char   *qd;
+    unsigned char   *qdend;
     unsigned int   bits;
     unsigned int   bitsunshifted=0;
     int             numbits;
     int             bitsleft;
     unsigned int   v;
 
-    qs = packbuf;
+    qpos = 0;
     qd = unpackbuf;
     ulen = 0L;
 
-    if (qs)
+    if (!packbuf || !unpackbuf || packsize < 0 || unpacksize < 0)
+        return(0);
+
+    if (packbuf)
     {
         {
             int             mostbits;
+            int             numchars;
             int             i;
             int             bitnumtbl[16];
             unsigned int    deltatbl[16];
@@ -201,10 +226,12 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
                 ulen |= (v<<16);
             }
 
+            if (ulen < 0 || ulen > unpacksize)
+                goto huff_fail;
+            qdend = unpackbuf+ulen;
+
             {
                 {
-                    int numchars;
-
                     {
                         unsigned int basecmp;
 
@@ -222,10 +249,16 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
 
                         do
                         {
+                            // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on codes of more than 15 bits and on
+                            // more than 256 codes, which do not fit the tables.
+                            if (numbits>=16)
+                                goto huff_fail;
                             basecmp <<= 1;
                             deltatbl[numbits] = basecmp-numchars;
 
                             SQgetnum(bitnum);               /* # of codes of n bits */
+                            if (bitnum>256-numchars)
+                                goto huff_fail;
                             bitnumtbl[numbits] = bitnum;
 
                             numchars += bitnum;
@@ -259,6 +292,10 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
 
                             SQgetnum(leapdelta);
                             ++leapdelta;
+                            // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on a leap past all 256 codes, which
+                            // circles the table for a long time.
+                            if (leapdelta>256)
+                                goto huff_fail;
 
                             do
                             {
@@ -286,6 +323,7 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
                     int nextcode;
                     int nextlen;
                     int i;
+                    int quickleft;
                     unsigned char *codeptr;
                     unsigned char *quickcodeptr;
                     unsigned char *quicklenptr;
@@ -293,6 +331,7 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
                     codeptr = codetbl;
                     quickcodeptr = quickcodetbl;
                     quicklenptr = quicklentbl;
+                    quickleft = 256;
 
                     for (bits=1; bits<=mostbits; ++bits)
                     {
@@ -300,6 +339,10 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
                         if (bits>=9)
                             break;
                         numbitentries = 1<<(8-bits);
+                        // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on more short codes than a prefix code has.
+                        if (bitnum*numbitentries>quickleft)
+                            goto huff_fail;
+                        quickleft -= bitnum*numbitentries;
 
                         while (bitnum--)
                         {
@@ -336,7 +379,7 @@ static int HUFF_decompress(unsigned char *packbuf, unsigned char *unpackbuf)
                 do
                 {
 
-                    *qd++ = quickcodeptr[bits>>24];
+                    HUFF_PUT(quickcodeptr[bits>>24]);
                     GET16BITS();
                     bits = bitsunshifted<<(16-bitsleft);
 
@@ -350,25 +393,25 @@ nextloop:
                     {
                         do
                         {
-                            *qd++ = quickcodeptr[bits>>24];
+                            HUFF_PUT(quickcodeptr[bits>>24]);
                             bits <<= numbits;
 
                             numbits = quicklenptr[bits>>24];
                             bitsleft -= numbits;
                             if (bitsleft<0) break;
-                            *qd++ = quickcodeptr[bits>>24];
+                            HUFF_PUT(quickcodeptr[bits>>24]);
                             bits <<= numbits;
 
                             numbits = quicklenptr[bits>>24];
                             bitsleft -= numbits;
                             if (bitsleft<0) break;
-                            *qd++ = quickcodeptr[bits>>24];
+                            HUFF_PUT(quickcodeptr[bits>>24]);
                             bits <<= numbits;
 
                             numbits = quicklenptr[bits>>24];
                             bitsleft -= numbits;
                             if (bitsleft<0) break;
-                            *qd++ = quickcodeptr[bits>>24];
+                            HUFF_PUT(quickcodeptr[bits>>24]);
                             bits <<= numbits;
 
                             numbits = quicklenptr[bits>>24];
@@ -392,6 +435,9 @@ nextloop:
 
                     if (numbits!=96)
                     {
+                        // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on a code that is not in the tables.
+                        if (mostbits<9)
+                            goto huff_fail;
                         cmp = (unsigned int) (bits>>16);  /* 16 bit left justified compare */
 
                         numbits = 8;
@@ -409,11 +455,13 @@ nextloop:
                     bits <<= (numbits);
                     bitsleft -= (numbits);
 
+                    if (cmp-deltatbl[numbits]>=(unsigned int)numchars)
+                        goto huff_fail;
                     code = codetbl[cmp-deltatbl[numbits]];  /* the code */
 
                     if (code!=clue && bitsleft>=0)
                     {
-                        *qd++ = code;
+                        HUFF_PUT(code);
                         goto nextloop;
                     }
 
@@ -426,7 +474,7 @@ nextloop:
 
                     if (code!=clue)
                     {
-                        *qd++ = code;
+                        HUFF_PUT(code);
                         goto nextloop;
                     }
 
@@ -440,6 +488,10 @@ nextloop:
                         SQgetnum(runlen);
                         if (runlen)                             /* runlength sequence */
                         {
+                            // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails on a run without a byte to repeat
+                            // and on a run past the decoded size of the header.
+                            if (d==unpackbuf || runlen>qdend-d)
+                                goto huff_fail;
                             dest = d+runlen;
                             code = *(d-1);
                             do
@@ -461,12 +513,15 @@ nextloop:
                         SQgetbits(t,8);                    /* explicite byte */
                         code = (unsigned char)t;
                     }
-                    *qd++ = code;
+                    HUFF_PUT(code);
                     goto nextloop;
                 }
 
             }
 
+            // TheSuperHackers @bugfix ateterycz 29/10/2026 Fails when the stream ends before the decoded size of the header.
+            if (qd!=qdend)
+                goto huff_fail;
 
 /****************************************************************/
 /*  Undelta                                                     */
@@ -503,6 +558,9 @@ nextloop:
         }
     }
     return(ulen);
+
+huff_fail:
+    return(0);
 }
 
 #if defined(_MSC_VER)
@@ -561,9 +619,9 @@ int GCALL HUFF_size(const void *compresseddata)
     return(len);
 }
 
-int GCALL HUFF_decode(void *dest, const void *compresseddata, int *compressedsize)
+int GCALL HUFF_decode(void *dest, int destsize, const void *compresseddata, int compressedsize)
 {
-    return(HUFF_decompress((unsigned char *)compresseddata, (unsigned char *)dest));
+    return(HUFF_decompress((unsigned char *)compresseddata, compressedsize, (unsigned char *)dest, destsize));
 }
 
 #endif
