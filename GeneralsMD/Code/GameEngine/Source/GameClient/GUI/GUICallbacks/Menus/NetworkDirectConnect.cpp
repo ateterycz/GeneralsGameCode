@@ -219,13 +219,15 @@ void JoinDirectConnectGame()
 	AsciiString ipstring;
 	asciientry.nextToken(&ipstring, "(");
 
-	Int ip1, ip2, ip3, ip4;
-	Int numFields = sscanf(ipstring.str(), "%d.%d.%d.%d", &ip1, &ip2, &ip3, &ip4);
-	(void)numFields; DEBUG_ASSERTCRASH(numFields == 4, ("JoinDirectConnectGame - invalid IP address format: %s", ipstring.str()));
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Rejects a malformed IP address, which left the address uninitialized. The address
+	// then stays 0, which RequestGameJoinDirectConnect rejects.
+	if (!ParseDirectConnectIP(ipstring.str(), &ipaddress))
+	{
+		DEBUG_LOG(("JoinDirectConnectGame - invalid IP address format: %s", ipstring.str()));
+	}
 
-	DEBUG_LOG(("JoinDirectConnectGame - joining at %d.%d.%d.%d", ip1, ip2, ip3, ip4));
+	DEBUG_LOG(("JoinDirectConnectGame - joining at %d.%d.%d.%d", PRINTF_IP_AS_4_INTS(ipaddress)));
 
-	ipaddress = (ip1 << 24) + (ip2 << 16) + (ip3 << 8) + ip4;
 //	ipaddress = htonl(ipaddress);
 
 	UnicodeString name;

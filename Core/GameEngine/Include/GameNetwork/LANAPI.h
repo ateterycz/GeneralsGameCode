@@ -280,6 +280,10 @@ Bool PrepareReceivedLANMessage( LANMessage *msg, Int length );
 // its game, and the packet router announces a game in progress, which is another player of the game after the host left.
 Bool MayAnnounceGame( const GameSlot *const slots[MAX_SLOTS], UnsignedInt senderIP, Bool gameInProgress );
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Parses the IPv4 address at the start of a direct connect entry. Returns FALSE and
+// leaves the address unchanged if the entry does not start with four numbers from 0 to 255 that dots separate.
+Bool ParseDirectConnectIP( const char *entry, UnsignedInt *ip );
+
 
 /**
  * The LANAPI class is used to instantiate a singleton which

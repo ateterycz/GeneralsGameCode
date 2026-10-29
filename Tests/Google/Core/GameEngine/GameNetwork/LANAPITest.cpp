@@ -168,3 +168,28 @@ TEST(LANAPI, KeepsDataOfMessageWithoutStrings)
 	static_assert(sizeof(LANMessage) == offsetof(LANMessage, GameInfo) + sizeof(LANMessage::GameInfo), "GameInfo must be the largest data");
 	EXPECT_EQ(memcmp(&msg.GameInfo, &unterminated.GameInfo, sizeof(msg.GameInfo)), 0);
 }
+
+TEST(LANAPI, ParsesDirectConnectIP)
+{
+	UnsignedInt ip = 0;
+	EXPECT_TRUE(ParseDirectConnectIP("192.168.0.1", &ip));
+	EXPECT_EQ(ip, 0xC0A80001u);
+	// The remote IP entries of the preferences hold the name of the host after the address.
+	EXPECT_TRUE(ParseDirectConnectIP("10.20.30.40:Host", &ip));
+	EXPECT_EQ(ip, 0x0A141E28u);
+	EXPECT_TRUE(ParseDirectConnectIP("255.255.255.255 ", &ip));
+	EXPECT_EQ(ip, 0xFFFFFFFFu);
+	EXPECT_TRUE(ParseDirectConnectIP("0.0.0.0", &ip));
+	EXPECT_EQ(ip, 0u);
+}
+
+TEST(LANAPI, RejectsMalformedDirectConnectIP)
+{
+	const char *const entries[] = { "", "Host", "192.168.0", "192.168.0.", "192.168.0.256", "192.168.-1.1", "300.1.1.1" };
+	for (const char *entry : entries)
+	{
+		UnsignedInt ip = 12345;
+		EXPECT_FALSE(ParseDirectConnectIP(entry, &ip)) << "entry \"" << entry << "\"";
+		EXPECT_EQ(ip, 12345u) << "entry \"" << entry << "\"";
+	}
+}

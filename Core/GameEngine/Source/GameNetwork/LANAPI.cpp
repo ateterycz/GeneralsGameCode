@@ -739,6 +739,28 @@ void LANAPI::RequestGameJoinDirectConnect(UnsignedInt ipaddress)
 	m_expiration = timeGetTime() + m_actionTimeout;
 }
 
+Bool ParseDirectConnectIP( const char *entry, UnsignedInt *ip )
+{
+	Int octets[4];
+	if (sscanf(entry, "%d.%d.%d.%d", &octets[0], &octets[1], &octets[2], &octets[3]) != 4)
+	{
+		return FALSE;
+	}
+
+	UnsignedInt address = 0;
+	for (Int i = 0; i < 4; ++i)
+	{
+		if (octets[i] < 0 || octets[i] > 255)
+		{
+			return FALSE;
+		}
+		address = (address << 8) | (UnsignedInt)octets[i];
+	}
+
+	*ip = address;
+	return TRUE;
+}
+
 void LANAPI::RequestGameLeave()
 {
 	LANMessage msg;
