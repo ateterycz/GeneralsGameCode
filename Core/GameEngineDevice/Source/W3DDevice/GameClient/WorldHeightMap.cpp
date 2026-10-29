@@ -1065,6 +1065,16 @@ Bool WorldHeightMap::ParseBlendTileDataChunk(DataChunkInput &file, DataChunkInfo
 	return pThis->ParseBlendTileData(file, info, userData);
 }
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Validates that the tiles of a texture class are inside of the tile array.
+// readTexClass reads up to numTiles tiles, and updateTileTexturePositions places width * width tiles.
+static Bool isValidTextureClassTiles(const TXTextureClass &texClass)
+{
+	if (texClass.firstTile < 0 || texClass.numTiles < 0 || texClass.width < 0 || texClass.width > NUM_SOURCE_TILES) {
+		return false;
+	}
+	return std::max(texClass.numTiles, texClass.width * texClass.width) <= NUM_SOURCE_TILES - texClass.firstTile;
+}
+
 /** Function to read in the tiles for a texture class. */
 void WorldHeightMap::readTexClass(TXTextureClass *texClass, TileData **tileData)
 {
@@ -1167,17 +1177,30 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	} else {
 		initCliffFlagsFromHeights();
 	}
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when a count is larger than the array that it indexes.
 	m_numBitmapTiles = file.readInt();
+	if (m_numBitmapTiles < 0 || m_numBitmapTiles > NUM_SOURCE_TILES) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
 	DEBUG_ASSERTCRASH(m_numBitmapTiles>0 && m_numBitmapTiles<2048, ("Unlikely numBitmapTiles."));
 	m_numBlendedTiles = file.readInt();
+	if (m_numBlendedTiles < 0 || m_numBlendedTiles > NUM_BLEND_TILES) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
 	DEBUG_ASSERTCRASH(m_numBlendedTiles>0 && m_numBlendedTiles<NUM_BLEND_TILES+1, ("Unlikely numBlendedTiles."));
 	if (info->version >= K_BLEND_TILE_VERSION_5) {
 		m_numCliffInfo = file.readInt();
+		if (m_numCliffInfo < 0 || m_numCliffInfo > NUM_CLIFF_INFO) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 	} else {
 		m_numCliffInfo = 1;	// cliffInfo[0] is the default info.
 	}
 // --> file loading here
 	m_numTextureClasses	= file.readInt();
+	if (m_numTextureClasses < 0 || m_numTextureClasses > NUM_TEXTURE_CLASSES) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
 	DEBUG_ASSERTCRASH(m_numTextureClasses>0 && m_numTextureClasses<200, ("Unlikely m_numTextureClasses."));
 	for (i=0; i<m_numTextureClasses; i++) {
 		m_textureClasses[i].globalTextureClass = -1;
@@ -1190,6 +1213,9 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	/*	Int legacy = */ file.readInt();
 
 		m_textureClasses[i].name = file.readAsciiString();
+		if (!isValidTextureClassTiles(m_textureClasses[i])) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		readTexClass(&m_textureClasses[i], m_sourceTiles);
 	}
 	m_numEdgeTextureClasses = 0;
@@ -1197,12 +1223,18 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	if (info->version >= K_BLEND_TILE_VERSION_4) {
 		m_numEdgeTiles	= file.readInt();
 		m_numEdgeTextureClasses	= file.readInt();
+		if (m_numEdgeTextureClasses < 0 || m_numEdgeTextureClasses > NUM_TEXTURE_CLASSES) {
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		}
 		for (i=0; i<m_numEdgeTextureClasses; i++) {
 			m_edgeTextureClasses[i].globalTextureClass = -1;
 			m_edgeTextureClasses[i].firstTile = file.readInt();
 			m_edgeTextureClasses[i].numTiles = file.readInt();
 			m_edgeTextureClasses[i].width = file.readInt();
 			m_edgeTextureClasses[i].name = file.readAsciiString();
+			if (!isValidTextureClassTiles(m_edgeTextureClasses[i])) {
+				throw ERROR_CORRUPT_FILE_FORMAT;
+			}
 			readTexClass(&m_edgeTextureClasses[i], m_edgeTiles);
 		}
 	}

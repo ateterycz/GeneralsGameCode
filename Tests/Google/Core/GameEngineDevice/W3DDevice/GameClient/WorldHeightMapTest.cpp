@@ -194,3 +194,87 @@ TEST_F(WorldHeightMapTest, ThrowsOnMoreBoundariesThanChunkHasBeforeAllocatingThe
 	expectCorruptFileFormat([&] { load(heightMap(2, 0x10000000) + blendTileData(BlendTiles())); });
 	expectCorruptFileFormat([&] { load(heightMap(2, 0x10000000), true); });
 }
+
+TEST_F(WorldHeightMapTest, ThrowsOnMoreBitmapTilesThanTileArrayHolds)
+{
+	BlendTiles tiles;
+	tiles.numBitmapTiles = NUM_SOURCE_TILES + 1;
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnMoreBlendedTilesThanBlendedTileArrayHolds)
+{
+	// The chunk has all blended tiles that it states, which start at index 1.
+	BlendTiles tiles;
+	tiles.numBlendedTiles = NUM_BLEND_TILES + 1;
+	for (Int i = 1; i < tiles.numBlendedTiles; ++i)
+	{
+		tiles.blendedTilesAndCliffInfo += blendedTile();
+	}
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnMoreCliffInfoThanCliffInfoArrayHolds)
+{
+	// The chunk has all cliff infos that it states, which start at index 1.
+	BlendTiles tiles;
+	tiles.numCliffInfo = NUM_CLIFF_INFO + 1;
+	for (Int i = 1; i < tiles.numCliffInfo; ++i)
+	{
+		tiles.blendedTilesAndCliffInfo += cliffInfo();
+	}
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnMoreTextureClassesThanTextureClassArrayHolds)
+{
+	BlendTiles tiles;
+	tiles.numTextureClasses = NUM_TEXTURE_CLASSES + 1;
+	tiles.textureClasses.clear();
+	for (Int i = 0; i < tiles.numTextureClasses; ++i)
+	{
+		tiles.textureClasses += textureClass(0, 1, 1);
+	}
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnMoreEdgeTextureClassesThanTextureClassArrayHolds)
+{
+	BlendTiles tiles;
+	tiles.numEdgeTextureClasses = NUM_TEXTURE_CLASSES + 1;
+	for (Int i = 0; i < tiles.numEdgeTextureClasses; ++i)
+	{
+		tiles.edgeTextureClasses += textureClass(0, 1, 1, true);
+	}
+	expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+}
+
+TEST_F(WorldHeightMapTest, ThrowsOnTextureClassTilesOutsideOfTileArray)
+{
+	const std::string classes[] = {
+		textureClass(-1, 1, 1),
+		textureClass(NUM_SOURCE_TILES, 1, 1),
+		textureClass(NUM_SOURCE_TILES - 3, 4, 2),
+		textureClass(0, 1, 33), // 33 by 33 tiles are more than the tile array holds.
+	};
+	for (const std::string& textureClass : classes)
+	{
+		BlendTiles tiles;
+		tiles.textureClasses = textureClass;
+		expectCorruptFileFormat([&] { load(heightMap() + blendTileData(tiles)); });
+
+		BlendTiles edgeTiles;
+		edgeTiles.numEdgeTextureClasses = 1;
+		edgeTiles.edgeTextureClasses = textureClass.substr(0, 3 * sizeof(Int)) + textureClass.substr(4 * sizeof(Int));
+		expectCorruptFileFormat([&] { load(heightMap() + blendTileData(edgeTiles)); });
+	}
+}
+
+TEST_F(WorldHeightMapTest, LoadsTextureClassesAtEndOfTileArray)
+{
+	BlendTiles tiles;
+	tiles.textureClasses = textureClass(NUM_SOURCE_TILES - 4, 4, 2);
+	tiles.numEdgeTextureClasses = 1;
+	tiles.edgeTextureClasses = textureClass(NUM_SOURCE_TILES - 4, 4, 2, true);
+	load(heightMap() + blendTileData(tiles));
+}
