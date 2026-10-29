@@ -85,6 +85,7 @@ and C1 to C3 are done as well (M6 is covered by M1's chunk bounds), each with un
 | M8 | Draw-time tile, blend and cliff indices from the map are read without bounds checks |
 | M9 | Out-of-range script action and condition types survive when the parameter count matches, and Generals lacks the template parameter count check |
 | C4 | Audit the LZHL decompressor, and fix `getMaxCompressedSize`, which is too small for small incompressible input |
+| C5 | If needed: since upstream PR 3460, a `.str` label without quoted text before its `END` makes the parser drop the whole file (`GameText.cpp`, the `!readString` branch), without a message in release builds. A custom map then shows all its text as missing. The data fix is to add a quoted line (`""` is accepted). The code fix is to store an empty text for that label, as before the PR. Translations whose `generals.csf` header counts are off fail as well; only English matters for this build. |
 
 **Disclosure.** Many of these bugs can be triggered remotely, and they also exist in the client that most online players
 use today (see Phase 2). `SECURITY.md` asks for vulnerabilities to be reported privately to TheSuperHackers before they
