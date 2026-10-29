@@ -178,7 +178,8 @@ void SessionLog::logGameStart(Bool loadingSaveGame)
 
 	log("Game start: %s%s on map %s", toString(TheGameLogic->getGameMode()), loadingSaveGame ? " from a save game" : "",
 		TheGlobalData->m_mapName.str());
-	log("  Seed %u, EXE CRC %8.8X", GetGameLogicRandomSeed(), TheGlobalData->m_exeCRC);
+	// The INI CRC tells apart players with different game data, such as with and without a game patch.
+	log("  Seed %u, EXE CRC %8.8X, INI CRC %8.8X", GetGameLogicRandomSeed(), TheGlobalData->m_exeCRC, TheGlobalData->m_iniCRC);
 
 	if (TheRecorder != nullptr && TheRecorder->isPlaybackMode())
 	{
