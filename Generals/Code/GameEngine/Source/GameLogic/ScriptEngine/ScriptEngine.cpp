@@ -7457,7 +7457,16 @@ SequentialScript::SequentialScript() : m_teamToExecOn(nullptr),
 // ------------------------------------------------------------------------------------------------
 void SequentialScript::crc( Xfer *xfer )
 {
-
+#if !RETAIL_COMPATIBLE_CRC
+	// TheSuperHackers @feature ateterycz 29/10/2026 Adds the sequential script progress to the CRC.
+	TeamID teamID = m_teamToExecOn ? m_teamToExecOn->getID() : TEAM_ID_INVALID;
+	xfer->xferUser( &teamID, sizeof( TeamID ) );
+	xfer->xferObjectID( &m_objectID );
+	xfer->xferInt( &m_currentInstruction );
+	xfer->xferInt( &m_timesToLoop );
+	xfer->xferInt( &m_framesToWait );
+	xfer->xferBool( &m_dontAdvanceInstruction );
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -7852,12 +7861,78 @@ void ScriptEngine::AdjustDebugVariableData(const AsciiString& variableName, Int 
 	_adjustVariable(variableName, value, (forcePause != 0));
 }
 
+#if !RETAIL_COMPATIBLE_CRC
+// ------------------------------------------------------------------------------------------------
+// TheSuperHackers @feature ateterycz 29/10/2026 Orders script counters and flags independent of their
+// allocation order, so that they are added to the CRC in the same order on every machine.
+// ------------------------------------------------------------------------------------------------
+static Bool counterLessForCRC( const TCounter *a, const TCounter *b )
+{
+	return a->name < b->name;
+}
+
+static Bool flagLessForCRC( const TFlag *a, const TFlag *b )
+{
+	return a->name < b->name;
+}
+#endif
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
 void ScriptEngine::crc( Xfer *xfer )
 {
+#if !RETAIL_COMPATIBLE_CRC
+	// TheSuperHackers @feature ateterycz 29/10/2026 Adds the deterministic script state to the CRC so that script
+	// mismatches are detected when they happen. State that can legitimately differ per machine, such as local player,
+	// UI, camera, audio and video state, is excluded.
+	Int i;
 
+	// sequential scripts
+	UnsignedShort sequentialScriptCount = (UnsignedShort)m_sequentialScripts.size();
+	xfer->xferUnsignedShort( &sequentialScriptCount );
+	for( VecSequentialScriptPtrIt it = m_sequentialScripts.begin(); it != m_sequentialScripts.end(); ++it )
+		xfer->xferSnapshot( *it );
+
+	//
+	// Counters and flags are allocated on first use, which can happen in a different order per machine.
+	// Therefore the ones in their default state, which equals not being allocated, are skipped and the
+	// others are added ordered by name.
+	//
+
+	// counters and timers
+	TCounter *counters[ MAX_COUNTERS ];
+	Int counterCount = 0;
+	for( i = 0; i < m_numCounters; ++i )
+	{
+		if( m_counters[ i ].value != 0 || m_counters[ i ].isCountdownTimer )
+			counters[ counterCount++ ] = &m_counters[ i ];
+	}
+	std::sort( counters, counters + counterCount, counterLessForCRC );
+	xfer->xferInt( &counterCount );
+	for( i = 0; i < counterCount; ++i )
+	{
+		xfer->xferAsciiString( &counters[ i ]->name );
+		xfer->xferInt( &counters[ i ]->value );
+		xfer->xferBool( &counters[ i ]->isCountdownTimer );
+	}
+
+	// flags
+	TFlag *flags[ MAX_FLAGS ];
+	Int flagCount = 0;
+	for( i = 0; i < m_numFlags; ++i )
+	{
+		if( m_flags[ i ].value )
+			flags[ flagCount++ ] = &m_flags[ i ];
+	}
+	std::sort( flags, flags + flagCount, flagLessForCRC );
+	xfer->xferInt( &flagCount );
+	for( i = 0; i < flagCount; ++i )
+		xfer->xferAsciiString( &flags[ i ]->name );
+
+	xfer->xferBool( &m_objectsShouldReceiveDifficultyBonus );
+	xfer->xferBool( &m_ChooseVictimAlwaysUsesNormal );
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------

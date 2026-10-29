@@ -3714,6 +3714,17 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 		CRCGEN_LOG(("CRC after AI for frame %d is 0x%8.8X", m_frame, xferCRC->getCRC()));
 	}
 
+#if !RETAIL_COMPATIBLE_CRC
+	// TheSuperHackers @feature ateterycz 29/10/2026 Adds the script engine to the CRC so that script mismatches are detected when they happen.
+	marker = "MARKER:TheScriptEngine";
+	xferCRC->xferAsciiString(&marker);
+	xferCRC->xferSnapshot( TheScriptEngine );
+	if (isInGameLogicUpdate())
+	{
+		CRCGEN_LOG(("CRC after script engine for frame %d is 0x%8.8X", m_frame, xferCRC->getCRC()));
+	}
+#endif
+
 	if (xferCRC->getXferMode() == XFER_SAVE)
 	{
 		marker = "MARKER:GameSave";
