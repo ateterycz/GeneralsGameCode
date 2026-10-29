@@ -45,6 +45,7 @@
 
 #include "Common/AddonCompat.h"
 #include "Common/crc.h"
+#include "Common/Diagnostic/SimulationMathCrc.h"
 #include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameAudio.h"
@@ -1299,6 +1300,14 @@ UnsignedInt GlobalData::generateExeCRC()
 		else {
 			DEBUG_CRASH(("Executable file has failed to open"));
 		}
+	}
+
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Adds the simulation math CRC to the EXE CRC, because the same EXE
+	// can compute different simulation math results on another system and would then mismatch during the match.
+	{
+		const UnsignedInt mathCRC = SimulationMathCrc::calculate();
+		exeCRC.computeCRC(&mathCRC, sizeof(mathCRC));
+		DEBUG_LOG(("Simulation math CRC is 0x%8.8X", mathCRC));
 	}
 #endif
 

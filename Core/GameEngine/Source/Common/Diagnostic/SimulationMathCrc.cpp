@@ -61,11 +61,15 @@ UnsignedInt SimulationMathCrc::calculate()
     XferCRC xfer;
     xfer.open("SimulationMathCrc");
 
+    // TheSuperHackers @bugfix ateterycz 29/10/2026 Restores the floating point control word of the caller after the calculation.
+    const UnsignedInt fpControlWord = _controlfp(0, 0);
+
     setFPMode();
 
     appendSimulationMathCrc(xfer);
 
     _fpreset();
+    _controlfp(fpControlWord, _MCW_EM | _MCW_RC | _MCW_PC);
 
     xfer.close();
 
