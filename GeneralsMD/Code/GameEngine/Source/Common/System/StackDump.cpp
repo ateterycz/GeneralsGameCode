@@ -120,7 +120,10 @@ void StackDumpFromContext(DWORD eip,DWORD esp,DWORD ebp, void (*callback)(const 
 //*****************************************************************************
 BOOL InitSymbolInfo()
 {
-	if (DbgHelpLoader::isLoaded())
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Remember whether the symbols are set up, instead of whether DbgHelp is loaded,
+	// because the MiniDumper loads DbgHelp without setting up the symbols.
+	static Bool symbolsInitialized = FALSE;
+	if (symbolsInitialized)
 		return TRUE;
 
 	if (DbgHelpLoader::isFailed())
@@ -146,21 +149,19 @@ BOOL InitSymbolInfo()
 
 	// turn it into a search path
 	_splitpath(pathname, drive, directory, nullptr, nullptr);
-	sprintf(pathname, "%s:\\%s", drive, directory);
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 The drive already ends with a colon, and the directory begins with a backslash.
+	sprintf(pathname, "%s%s", drive, directory);
 
 	// append the current directory to build a search path for SymInit
 	::lstrcat(pathname, ";.;");
 
-	if(DbgHelp::SymInitialize(process, pathname, FALSE))
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Let SymInitialize add the modules of the process at the addresses they are loaded at,
+	// because the executable that SymLoadModule added had no symbols for the addresses of the stack.
+	if(DbgHelp::SymInitialize(process, pathname, TRUE))
 	{
-		// regenerate the name of the app
-		::GetModuleFileName(nullptr, pathname, _MAX_PATH);
-		if(DbgHelp::SymLoadModule(process, nullptr, pathname, nullptr, 0, 0))
-		{
-				//Load any other relevant modules (ie dlls) here
-				atexit(DbgHelpLoader::unload);
-				return TRUE;
-		}
+		symbolsInitialized = TRUE;
+		atexit(DbgHelpLoader::unload);
+		return TRUE;
 	}
 
 	DbgHelpLoader::unload();
@@ -180,6 +181,11 @@ HANDLE process = GetCurrentProcess();
 
 memset(&gsContext, 0, sizeof(CONTEXT));
 gsContext.ContextFlags = CONTEXT_FULL;
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Pass the registers to StackWalk, so that it can also walk through
+// the functions without a frame pointer of optimized builds.
+gsContext.Eip = myeip;
+gsContext.Esp = myesp;
+gsContext.Ebp = myebp;
 
 memset(&stack_frame, 0, sizeof(STACKFRAME));
 stack_frame.AddrPC.Mode = AddrModeFlat;
@@ -212,7 +218,7 @@ stack_frame.AddrFrame.Offset = myebp;
 											process,
 											thread,
 											&stack_frame,
-											nullptr, //&gsContext,
+											&gsContext,
 											nullptr,
 											DbgHelp::SymFunctionTableAccess,
 											DbgHelp::SymGetModuleBase,
@@ -228,7 +234,7 @@ stack_frame.AddrFrame.Offset = myebp;
 											process,
 											thread,
 											&stack_frame,
-											nullptr, //&gsContext,
+											&gsContext,
 											nullptr,
 											DbgHelp::SymFunctionTableAccess,
 											DbgHelp::SymGetModuleBase,
