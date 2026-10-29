@@ -714,6 +714,10 @@ Bool DataChunkInput::isValidFileType()
 
 AsciiString DataChunkInput::openDataChunk(DataChunkVersionType *ver )
 {
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the header of a nested chunk goes past the end of its parent chunk.
+	if (m_chunkStack && m_chunkStack->dataLeft < (Int)(sizeof(UnsignedInt) + sizeof(DataChunkVersionType) + sizeof(Int)))
+		throw ERROR_CORRUPT_FILE_FORMAT;
+
 	// allocate a new chunk and place it on top of the chunk stack
 	InputChunk *c = newInstance(InputChunk);
 	c->id = 0;
@@ -731,6 +735,13 @@ AsciiString DataChunkInput::openDataChunk(DataChunkVersionType *ver )
 	// read the chunk data size
 	m_file->read( (char *)&c->dataSize, sizeof(Int) );
 	decrementDataLeft( sizeof(Int) );
+
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when a nested chunk has a negative size or is larger than the rest of its parent chunk.
+	if (m_chunkStack && (c->dataSize < 0 || c->dataSize > m_chunkStack->dataLeft))
+	{
+		deleteInstance(c);
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
 
 	// all of the data remains to be read
 	c->dataLeft = c->dataSize;
@@ -853,34 +864,32 @@ void DataChunkInput::decrementDataLeft( Int size )
 Real DataChunkInput::readReal()
 {
 	Real r;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(Real), ("Read past end of chunk."));
-	m_file->read( (char *)&r, sizeof(Real) );
-	decrementDataLeft( sizeof(Real) );
+	readArrayOfBytes( (char *)&r, sizeof(Real) );
 	return r;
 }
 
 Int DataChunkInput::readInt()
 {
 	Int i;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(Int), ("Read past end of chunk."));
-	m_file->read( (char *)&i, sizeof(Int) );
-	decrementDataLeft( sizeof(Int) );
+	readArrayOfBytes( (char *)&i, sizeof(Int) );
 	return i;
 }
 
 Byte DataChunkInput::readByte()
 {
 	Byte b;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(Byte), ("Read past end of chunk."));
-	m_file->read( (char *)&b, sizeof(Byte) );
-	decrementDataLeft( sizeof(Byte) );
+	readArrayOfBytes( (char *)&b, sizeof(Byte) );
 	return b;
 }
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when a read is outside of a chunk, goes past the end of the chunk or goes past the end of the file.
+// All other reads of chunk data go through this function.
 void DataChunkInput::readArrayOfBytes(char *ptr, Int len)
 {
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=len, ("Read past end of chunk."));
-	m_file->read( ptr, len );
+	if (m_chunkStack == nullptr || len < 0 || len > m_chunkStack->dataLeft)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	if (m_file->read( ptr, len ) != len)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 	decrementDataLeft( len );
 }
 
@@ -901,10 +910,10 @@ NameKeyType DataChunkInput::readNameKey()
 Dict DataChunkInput::readDict()
 {
 	UnsignedShort len;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(UnsignedShort), ("Read past end of chunk."));
-	m_file->read( &len, sizeof(UnsignedShort) );
-	decrementDataLeft( sizeof(UnsignedShort) );
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=len, ("Read past end of chunk."));
+	readArrayOfBytes( (char *)&len, sizeof(UnsignedShort) );
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the chunk is too short for the number of pairs, because each pair takes more than one byte.
+	if (len > m_chunkStack->dataLeft)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 
 	Dict d(len);
 
@@ -946,15 +955,11 @@ Dict DataChunkInput::readDict()
 AsciiString DataChunkInput::readAsciiString()
 {
 	UnsignedShort len;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(UnsignedShort), ("Read past end of chunk."));
-	m_file->read( &len, sizeof(UnsignedShort) );
-	decrementDataLeft( sizeof(UnsignedShort) );
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=len, ("Read past end of chunk."));
+	readArrayOfBytes( (char *)&len, sizeof(UnsignedShort) );
 	AsciiString theString;
 	if (len>0) {
 		char *str = theString.getBufferForRead(len);
-		m_file->read( str, len );
-		decrementDataLeft( len );
+		readArrayOfBytes( str, len );
 		// add null delimiter to string.  Note that getBufferForRead allocates space for terminating null.
 		str[len] = '\000';
 	}
@@ -965,15 +970,11 @@ AsciiString DataChunkInput::readAsciiString()
 UnicodeString DataChunkInput::readUnicodeString()
 {
 	UnsignedShort len;
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=sizeof(UnsignedShort), ("Read past end of chunk."));
-	m_file->read( &len, sizeof(UnsignedShort) );
-	decrementDataLeft( sizeof(UnsignedShort) );
-	DEBUG_ASSERTCRASH(m_chunkStack->dataLeft>=len, ("Read past end of chunk."));
+	readArrayOfBytes( (char *)&len, sizeof(UnsignedShort) );
 	UnicodeString theString;
 	if (len>0) {
 		WideChar *str = theString.getBufferForRead(len);
-		m_file->read( (char*)str, len*sizeof(WideChar) );
-		decrementDataLeft( len*sizeof(WideChar) );
+		readArrayOfBytes( (char*)str, len*sizeof(WideChar) );
 		// add null delimiter to string.  Note that getBufferForRead allocates space for terminating null.
 		str[len] = '\000';
 	}
