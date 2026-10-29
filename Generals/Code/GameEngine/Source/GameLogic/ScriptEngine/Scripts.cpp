@@ -2183,6 +2183,9 @@ Parameter *Parameter::ReadParameter(DataChunkInput &file)
 		}
     else
     {
+			// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when the kind of index is outside of the kind of names.
+			if (pParm->m_int < 0 || pParm->m_int >= KINDOF_COUNT)
+				throw ERROR_CORRUPT_FILE_FORMAT;
 			// Seems weird, but this is so WB will load them into the proper format.
 			pParm->m_string = kindofNames[pParm->m_int];
 		}

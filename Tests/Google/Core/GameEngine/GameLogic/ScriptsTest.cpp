@@ -20,6 +20,7 @@
 #include <string>
 
 #include "Common/GlobalData.h"
+#include "Common/KindOf.h"
 #include "Common/NameKeyGenerator.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Scripts.h"
@@ -140,6 +141,31 @@ TEST_F(ScriptsTest, ThrowsOnConditionWithNegativeParameterCount)
 	OrCondition *orCondition = newInstance(OrCondition);
 	expectCorruptFileFormat([&] { parseCondition(item(Condition::FLAG, -1, flagParameters()), orCondition); });
 	deleteInstance(orCondition);
+}
+
+TEST_F(ScriptsTest, ReadsKindOfParameterByIndex)
+{
+	OrCondition *orCondition = newInstance(OrCondition);
+	const std::string parameters = parameter(Parameter::FLAG, 0, "Flag") + parameter(Parameter::KIND_OF_PARAM, KINDOF_COUNT - 1);
+	parseCondition(item(Condition::FLAG, 2, parameters), orCondition);
+
+	Condition *condition = orCondition->getFirstAndCondition();
+	ASSERT_NE(condition, nullptr);
+	ASSERT_EQ(condition->getNumParameters(), 2);
+	EXPECT_EQ(condition->getParameter(1)->getString(), KindOfMaskType::getBitNames()[KINDOF_COUNT - 1]);
+	deleteInstance(orCondition);
+}
+
+TEST_F(ScriptsTest, ThrowsOnKindOfParameterOutsideOfKindOfNames)
+{
+	for (const Int kindOf : {-1, static_cast<Int>(KINDOF_COUNT), 0x10000000})
+	{
+		SCOPED_TRACE(kindOf);
+		OrCondition *orCondition = newInstance(OrCondition);
+		const std::string parameters = parameter(Parameter::FLAG, 0, "Flag") + parameter(Parameter::KIND_OF_PARAM, kindOf);
+		expectCorruptFileFormat([&] { parseCondition(item(Condition::FLAG, 2, parameters), orCondition); });
+		deleteInstance(orCondition);
+	}
 }
 
 TEST_F(ScriptsTest, ThrowsOnActionWithMoreParametersThanItHolds)
