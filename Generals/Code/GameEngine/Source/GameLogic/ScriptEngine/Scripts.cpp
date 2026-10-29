@@ -170,6 +170,15 @@ static Condition::ConditionType ParameterChangesVer2[] =
 
 enum { AT_END = 0x00FFFFFF };
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Throws when a map states more parameters than a condition or action holds.
+static Int readNumParameters(DataChunkInput &file)
+{
+	const Int numParms = file.readInt();
+	if (numParms < 0 || numParms > MAX_PARMS)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	return numParms;
+}
+
 //-------------------------------------------------------------------------------------------------
 // ******************************** class  ScriptList *********************************************
 //-------------------------------------------------------------------------------------------------
@@ -1658,7 +1667,7 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 	Condition	*pCondition = newInstance(Condition);
 	OrCondition *pOr = (OrCondition *)userData;
 	pCondition->m_conditionType = (enum ConditionType)file.readInt();
-	pCondition->m_numParms =file.readInt();
+	pCondition->m_numParms = readNumParameters(file);
 	Int i;
 	for (i=0; i<pCondition->m_numParms; i++)
 	{
@@ -1667,7 +1676,8 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 
 	if (file.getChunkVersion() < K_SCRIPT_CONDITION_VERSION_2) {
 		for (int j = 0; ParameterChangesVer2[j] != -1; ++j) {
-			if (pCondition->m_conditionType == ParameterChangesVer2[j]) {
+			// TheSuperHackers @bugfix ateterycz 29/10/2026 Adds the parameter only if the parameter array has room for it.
+			if (pCondition->m_conditionType == ParameterChangesVer2[j] && pCondition->m_numParms < MAX_PARMS) {
 				pCondition->m_parms[pCondition->m_numParms] = newInstance(Parameter)(Parameter::SURFACES_ALLOWED, 3);
 				pCondition->m_numParms = 3;
 			}
@@ -2363,7 +2373,7 @@ Bool ScriptAction::ParseActionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 	}
 #endif
 
-	pScriptAction->m_numParms =file.readInt();
+	pScriptAction->m_numParms = readNumParameters(file);
 	Int i;
 	for (i=0; i<pScriptAction->m_numParms; i++)
 	{
@@ -2490,7 +2500,7 @@ Bool ScriptAction::ParseActionFalseDataChunk(DataChunkInput &file, DataChunkInfo
 	ScriptAction	*pScriptAction = newInstance(ScriptAction);
 
 	pScriptAction->m_actionType = (enum ScriptActionType)file.readInt();
-	pScriptAction->m_numParms =file.readInt();
+	pScriptAction->m_numParms = readNumParameters(file);
 	Int i;
 	for (i=0; i<pScriptAction->m_numParms; i++) {
 		pScriptAction->m_parms[i] = Parameter::ReadParameter(file);
