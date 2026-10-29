@@ -167,7 +167,11 @@ NetPacket::NetPacket() {
 NetPacket::NetPacket(const TransportMessage& msg) {
 	init();
 
-	m_packetLen = msg.length;
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Drops a packet that is longer than the packet buffer, so that its commands are not read past the buffer.
+	// Retail compatible builds can receive one, because their transport message holds more data than a packet.
+	if ((msg.length >= 0) && (msg.length <= MAX_PACKET_SIZE)) {
+		m_packetLen = msg.length;
+	}
 	memcpy(m_packet, msg.data, MAX_PACKET_SIZE);
 	m_numCommands = -1;
 	m_addr = msg.addr;

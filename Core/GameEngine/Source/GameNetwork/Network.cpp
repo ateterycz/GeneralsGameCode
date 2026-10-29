@@ -37,6 +37,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "GameNetwork/NetworkInterface.h"
+#include "GameNetwork/networkutil.h"
 #include "GameNetwork/udp.h"
 #include "GameNetwork/Transport.h"
 #include "WWLib/strtok_r.h"
@@ -645,8 +646,10 @@ void Network::processFrameSynchronizedNetCommand(NetCommandRef *msg) {
 }
 
 void Network::processRunAheadCommand(NetRunAheadCommandMsg *msg) {
-	m_runAhead = msg->getRunAhead();
-	m_frameRate = msg->getFrameRate();
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Clamps the run ahead and frame rate to the range that the packet router sends.
+	// Clamping depends on the command only, so every client that gets the same command sets the same values.
+	m_runAhead = ClampRunAhead(msg->getRunAhead());
+	m_frameRate = ClampRunAheadFrameRate(msg->getFrameRate());
 	time_t frameGrouping = (1000 * m_runAhead) / m_frameRate; // number of miliseconds between packet sends
 	frameGrouping = frameGrouping / 2; // since we only want the latency for one way to be a factor.
 //	DEBUG_LOG(("Network::processRunAheadCommand - trying to set frame grouping to %d.  run ahead = %d, m_frameRate = %d", frameGrouping, m_runAhead, m_frameRate));

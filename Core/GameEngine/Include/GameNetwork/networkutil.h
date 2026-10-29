@@ -36,6 +36,12 @@ Bool CommandRequiresDirectSend(const NetCommandMsg *msg);
 Bool IsCommandSynchronized(NetCommandType type);
 const char* GetNetCommandTypeAsString(NetCommandType type);
 
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Validates the values of received commands that index arrays or divide.
+Bool IsDisconnectVoteValid(Int votedSlot, Int voterSlot);
+Bool IsPlayerLeaveValid(UnsignedInt leavingPlayerID, UnsignedInt senderPlayerID);
+Int ClampRunAhead(Int runAhead);
+Int ClampRunAheadFrameRate(Int frameRate);
+
 #ifdef DEBUG_LOGGING
 extern "C" {
 void dumpBufferToLog(const void *vBuf, Int len, const char *fname, Int line);

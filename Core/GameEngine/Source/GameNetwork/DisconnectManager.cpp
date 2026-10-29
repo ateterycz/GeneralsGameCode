@@ -436,6 +436,12 @@ void DisconnectManager::processDisconnectScreenOff(NetCommandMsg *msg, Connectio
 }
 
 void DisconnectManager::applyDisconnectVote(Int slot, UnsignedInt frame, Int fromSlot, ConnectionManager *conMgr) {
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Ignores a disconnect vote for or from a slot that does not exist.
+	if (!IsDisconnectVoteValid(slot, fromSlot)) {
+		DEBUG_LOG(("DisconnectManager::applyDisconnectVote - ignoring a vote to disconnect slot %d from slot %d", slot, fromSlot));
+		return;
+	}
+
 	m_playerVotes[slot][fromSlot].vote = TRUE;
 	m_playerVotes[slot][fromSlot].frame = frame;
 	Int numVotes = countVotesForPlayer(slot);

@@ -1069,6 +1069,13 @@ void ConnectionManager::processAck(NetCommandMsg *msg) {
 PlayerLeaveCode ConnectionManager::processPlayerLeave(NetPlayerLeaveCommandMsg *msg) {
 	UnsignedByte playerID = msg->getLeavingPlayerID();
 
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Ignores a leave for a slot that does not exist or for a player other than the sender.
+	// Every client processes the leave on the same frame and decides alike, because the decision depends on the command only.
+	if (!IsPlayerLeaveValid(playerID, msg->getPlayerID())) {
+		DEBUG_LOG(("ConnectionManager::processPlayerLeave() - ignoring a leave of player %d from player %d", playerID, msg->getPlayerID()));
+		return PLAYERLEAVECODE_UNKNOWN;
+	}
+
 	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the leave to the session log in all builds.
 	AsciiString name;
 	name.translate(getPlayerName(playerID));
@@ -2004,6 +2011,10 @@ UnsignedInt ConnectionManager::getLocalPlayerID() {
 
 UnicodeString ConnectionManager::getPlayerName(Int playerNum) {
 	UnicodeString retval;
+	// TheSuperHackers @bugfix ateterycz 29/10/2026 Returns an empty name for a slot that does not exist.
+	if ((playerNum < 0) || (playerNum >= MAX_SLOTS)) {
+		return retval;
+	}
 	if( playerNum == m_localSlot ) {
 		retval = m_localUser->GetName();
 	}	else if (((m_connections[playerNum] != nullptr) && (m_connections[playerNum]->isQuitting() == FALSE))) {

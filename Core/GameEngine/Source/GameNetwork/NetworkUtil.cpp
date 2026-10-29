@@ -228,3 +228,28 @@ const char* GetNetCommandTypeAsString(NetCommandType type)
 
 #undef CASE_LABEL
 }
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Returns true if both slots of a disconnect vote exist, because they index the vote table.
+Bool IsDisconnectVoteValid(Int votedSlot, Int voterSlot)
+{
+	return (votedSlot >= 0) && (votedSlot < MAX_SLOTS) && (voterSlot >= 0) && (voterSlot < MAX_SLOTS);
+}
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Returns true if the leaving player exists and is the sender, because a player only sends its own leave.
+Bool IsPlayerLeaveValid(UnsignedInt leavingPlayerID, UnsignedInt senderPlayerID)
+{
+	return (leavingPlayerID < MAX_SLOTS) && (leavingPlayerID == senderPlayerID);
+}
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Clamps a received run ahead to the range that the packet router sends.
+// A larger run ahead schedules commands beyond the frames that the frame data holds.
+Int ClampRunAhead(Int runAhead)
+{
+	return clamp<Int>(MIN_RUNAHEAD, runAhead, MAX_FRAMES_AHEAD / 2);
+}
+
+// TheSuperHackers @bugfix ateterycz 29/10/2026 Raises a received frame rate to the minimum that the packet router sends, because the frame rate is a divisor.
+Int ClampRunAheadFrameRate(Int frameRate)
+{
+	return (frameRate < MIN_LOGIC_FRAMES) ? MIN_LOGIC_FRAMES : frameRate;
+}
