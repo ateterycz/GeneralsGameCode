@@ -293,3 +293,21 @@ TEST_F(FileSystemTest, UsesFileOfFirstArchiveByNameWithoutPatchArchives)
 
 	EXPECT_EQ(readGameFile("Data\\INI\\WindowTransitions.ini"), "first");
 }
+
+// Mods such as Contra name their patch archive !!Mod_Patch.big so that it comes before their !Mod_INI.big. In a mod
+// folder, the file of the archive that comes first by name is used, as in the game folder, and mod files are used
+// before the files of the game.
+TEST_F(FileSystemTest, UsesFileOfFirstArchiveByNameInModFolder)
+{
+	std::filesystem::create_directories("Game");
+	std::filesystem::create_directories("Mod");
+	writeBigFile("Game\\INIZH.big", ArchiveContent(1, std::make_pair("Data\\INI\\Weapon.ini", "game")));
+	writeBigFile("Mod\\!!Mod_Patch.big", ArchiveContent(1, std::make_pair("Data\\INI\\Weapon.ini", "mod patch")));
+	writeBigFile("Mod\\!Mod_INI.big", ArchiveContent(1, std::make_pair("Data\\INI\\Weapon.ini", "mod")));
+	writeBigFile("Mod\\Mod_Maps.big", ArchiveContent(1, std::make_pair("Data\\INI\\Weapon.ini", "mod maps")));
+
+	EXPECT_TRUE(static_cast<BIGFileSystem *>(TheArchiveFileSystem)->loadGameArchiveFilesFromDirectory("Game\\"));
+	EXPECT_TRUE(TheArchiveFileSystem->loadArchiveFilesFromDirectory("Mod\\", "*.big", TRUE));
+
+	EXPECT_EQ(readGameFile("Data\\INI\\Weapon.ini"), "mod patch");
+}

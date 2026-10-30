@@ -43,6 +43,9 @@
 
 #include "Utility/endian_compat.h"
 
+#include <algorithm>
+#include <vector>
+
 
 static const char BIGFileIdentifier[] = { 'B', 'I', 'G', 'F' };
 
@@ -231,11 +234,18 @@ void BIGFileSystem::closeAllFiles() {
 
 Bool BIGFileSystem::loadArchiveFilesFromDirectory(AsciiString dir, AsciiString fileMask, Bool overwrite) {
 
-	FilenameList filenameList;
-	TheLocalFileSystem->getFileListInDirectory(dir, "", fileMask, filenameList, TRUE);
+	FilenameList fileNames;
+	TheLocalFileSystem->getFileListInDirectory(dir, "", fileMask, fileNames, TRUE);
+
+	// TheSuperHackers @bugfix ateterycz 30/10/2026 Loads archives that overwrite in reverse name order, because the last
+	// one loaded wins. So in a mod folder the file of the archive that comes first by name is used, as in the game
+	// folder, which mods such as Contra rely on for their !!Mod_Patch.big.
+	std::vector<AsciiString> filenameList(fileNames.begin(), fileNames.end());
+	if (overwrite)
+		std::reverse(filenameList.begin(), filenameList.end());
 
 	Bool actuallyAdded = FALSE;
-	FilenameListIter it = filenameList.begin();
+	std::vector<AsciiString>::iterator it = filenameList.begin();
 	while (it != filenameList.end()) {
 #if RTS_ZEROHOUR
 		// TheSuperHackers @bugfix bobtista 18/11/2025 Skip duplicate INIZH.big in Data\INI to prevent CRC mismatches.

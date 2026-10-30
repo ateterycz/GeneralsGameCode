@@ -34,6 +34,9 @@ public:
 
 	// Parses startup flags and applies the process working directory.
 	static void parseCommandLineForStartup();
+	// TheSuperHackers @bugfix ateterycz 30/10/2026 Parses -mod once the local file system exists, so that the mod
+	// archives can load before GameData.ini and the GameData.ini of a mod is used.
+	static void parseCommandLineForMods();
 	static void parseCommandLineForEngineInit();
 
 	// Returns true if command-line parsing consumed the zero-based argument index.

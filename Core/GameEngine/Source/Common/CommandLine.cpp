@@ -1189,6 +1189,12 @@ static CommandLineParam paramsForStartup[] =
 	{ "-useCwd", parseUseCwd },
 };
 
+// These Params are parsed during Engine Init after the file systems are created and before GameData.ini is loaded
+static CommandLineParam paramsForMods[] =
+{
+	{ "-mod", parseMod },
+};
+
 // These Params are parsed during Engine Init before INI data is loaded
 static CommandLineParam paramsForEngineInit[] =
 {
@@ -1201,7 +1207,6 @@ static CommandLineParam paramsForEngineInit[] =
 	{ "-particleEdit", parseParticleEdit },
 	{ "-scriptDebug", parseScriptDebug },
 	{ "-playStats", parsePlayStats },
-	{ "-mod", parseMod },
 	{ "-noshaders", parseNoShaders },
 	{ "-quickstart", parseQuickStart },
 	{ "-useWaveEditor", parseUseWaveEditor },
@@ -1439,6 +1444,17 @@ void CommandLine::parseCommandLineForStartup()
 
 	if (!rts::WorkingDirectory::hasSetWorkingDirectory())
 		rts::WorkingDirectory::setExecutableWorkingDirectory();
+}
+
+void CommandLine::parseCommandLineForMods()
+{
+	createGlobalData();
+
+	DEBUG_ASSERTCRASH(TheGlobalData->m_commandLineData.m_hasParsedCommandLineForStartup,
+		("parseCommandLineForStartup is expected to be called before parseCommandLineForMods\n"));
+
+	parseCommandLine(paramsForMods, ARRAY_SIZE(paramsForMods),
+		TheWritableGlobalData->m_commandLineData.m_parsedArguments);
 }
 
 void CommandLine::parseCommandLineForEngineInit()

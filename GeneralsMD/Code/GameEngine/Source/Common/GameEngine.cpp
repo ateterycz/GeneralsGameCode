@@ -437,6 +437,10 @@ void GameEngine::init()
 
 		initSubsystem(TheArchiveFileSystem, "TheArchiveFileSystem", createArchiveFileSystem(), nullptr); // this MUST come after TheLocalFileSystem creation
 
+		// TheSuperHackers @bugfix ateterycz 30/10/2026 Loads the mods before GameData.ini, so that the GameData.ini of a mod is used.
+		CommandLine::parseCommandLineForMods();
+		TheArchiveFileSystem->loadMods();
+
     	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
 	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
 	DEBUG_LOG(("----------------------------------------------------------------------------After TheArchiveFileSystem  = %f seconds", ((double)(endTime64-startTime64)/(double)(freq64))));////////////////////////////////////////////////////////////////////////////
@@ -464,8 +468,6 @@ void GameEngine::init()
 
 		// special-case: parse command-line parameters after loading global data
 		CommandLine::parseCommandLineForEngineInit();
-
-		TheArchiveFileSystem->loadMods();
 
 		// doesn't require resets so just create a single instance here.
 		TheGameLODManager = MSGNEW("GameEngineSubsystem") GameLODManager;
