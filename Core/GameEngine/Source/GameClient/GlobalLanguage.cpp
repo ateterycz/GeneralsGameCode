@@ -56,6 +56,7 @@
 #include "Common/INI.h"
 #include "Common/Registry.h"
 #include "Common/FileSystem.h"
+#include "Common/GlobalData.h"
 #include "Common/OptionPreferences.h"
 
 #include "GameClient/Display.h"
@@ -160,6 +161,20 @@ void GlobalLanguage::init()
 	StringList::iterator it = m_localFonts.begin();
 	while( it != m_localFonts.end())
 	{
+		// TheSuperHackers @bugfix ateterycz 30/10/2026 Adds a font of a mod from its -mod folder, as a mod launcher would
+		// have put it into the game folder. The path is kept so that the destructor removes the same font.
+		if (TheGlobalData->m_modDir.isNotEmpty())
+		{
+			AsciiString modFont;
+			modFont.format("%s%s", TheGlobalData->m_modDir.str(), it->str());
+			if (AddFontResource(modFont.str()) != 0)
+			{
+				*it = modFont;
+				++it;
+				continue;
+			}
+		}
+
 		AsciiString font = *it;
 		if(AddFontResource(font.str()) == 0)
 		{
