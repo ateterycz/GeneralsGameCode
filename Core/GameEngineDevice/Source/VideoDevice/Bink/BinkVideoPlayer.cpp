@@ -257,9 +257,20 @@ VideoStreamInterface*	BinkVideoPlayer::open( AsciiString movieTitle )
 
 		if (TheGlobalData->m_modDir.isNotEmpty())
 		{
+			// TheSuperHackers @bugfix ateterycz 30/10/2026 Also opens the localized movies of a mod, such as the
+			// Data\English\Movies of Shockwave, as the game does in its own folder.
+			char modLocalizedFilePath[ _MAX_PATH ];
+			snprintf( modLocalizedFilePath, ARRAY_SIZE(modLocalizedFilePath), "%s" VIDEO_LANG_PATH_FORMAT, TheGlobalData->m_modDir.str(), GetRegistryLanguage().str(), pVideo->m_filename.str(), VIDEO_EXT );
+			HBINK handle = BinkOpen(modLocalizedFilePath , BINKPRELOADALL );
+			DEBUG_ASSERTLOG(!handle, ("opened localized bink file %s", modLocalizedFilePath));
+			if (handle)
+			{
+				return createStream( handle );
+			}
+
 			char filePath[ _MAX_PATH ];
 			snprintf( filePath, ARRAY_SIZE(filePath), "%s%s\\%s.%s", TheGlobalData->m_modDir.str(), VIDEO_PATH, pVideo->m_filename.str(), VIDEO_EXT );
-			HBINK handle = BinkOpen(filePath , BINKPRELOADALL );
+			handle = BinkOpen(filePath , BINKPRELOADALL );
 			DEBUG_ASSERTLOG(!handle, ("opened bink file %s", filePath));
 			if (handle)
 			{
