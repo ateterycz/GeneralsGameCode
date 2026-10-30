@@ -1211,10 +1211,12 @@ Bool GameTextManager::parseStringFile( const char *filename, StringInfoVec& out,
 			}
 		}
 
+		// TheSuperHackers @bugfix ateterycz 30/10/2026 Keeps a label without quoted text as an empty text, as the retail
+		// game does, instead of dropping the whole file. Contra's Generals.str has such a label, and dropping the file
+		// left all its text missing.
 		if ( !readString )
 		{
-			ok = FALSE;
-			goto quit;
+			DEBUG_LOG(("String label '%s' has no string defined", info.label.str()));
 		}
 
 		out.push_back( info );
