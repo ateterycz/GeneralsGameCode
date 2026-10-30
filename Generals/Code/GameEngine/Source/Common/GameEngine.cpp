@@ -177,9 +177,47 @@ extern CComModule _Module;
 static void updateTGAtoDDS();
 
 //-------------------------------------------------------------------------------------------------
+// TheSuperHackers @tweak ateterycz 30/10/2026 Returns "CNC " and the name of the -mod folder or file in capitals, for
+// example "CNC CONTRA" for -mod Mods\Contra, or an empty string without -mod.
+static UnicodeString getModTitle()
+{
+	AsciiString modName = TheGlobalData->m_modDir.isNotEmpty() ? TheGlobalData->m_modDir : TheGlobalData->m_modBIG;
+	while (modName.endsWith("\\") || modName.endsWith("/"))
+		modName.removeLastChar();
+
+	const char *name = modName.str();
+	const char *lastBackslash = modName.reverseFind('\\');
+	const char *lastSlash = modName.reverseFind('/');
+	if (lastBackslash != nullptr && (lastSlash == nullptr || lastBackslash > lastSlash))
+		name = lastBackslash + 1;
+	else if (lastSlash != nullptr)
+		name = lastSlash + 1;
+
+	AsciiString shortName = name;
+	if (TheGlobalData->m_modDir.isEmpty())
+	{
+		const char *extension = shortName.reverseFind('.');
+		if (extension != nullptr)
+			shortName.truncateBy(static_cast<Int>(strlen(extension)));
+	}
+
+	UnicodeString modTitle;
+	if (shortName.isNotEmpty())
+	{
+		shortName.toUpper();
+		UnicodeString unicodeName;
+		unicodeName.translate(shortName);
+		modTitle.format(L"CNC %ls", unicodeName.str());
+	}
+	return modTitle;
+}
+
+//-------------------------------------------------------------------------------------------------
 static void updateWindowTitle()
 {
 	// TheSuperHackers @tweak Now prints product and version information in the Window title.
+	// TheSuperHackers @tweak ateterycz 30/10/2026 Once the INI CRC is known, prints the version and checksum line of the
+	// main menu instead, followed by the title of a -mod.
 
 	DEBUG_ASSERTCRASH(TheVersion != nullptr, ("TheVersion is null"));
 	DEBUG_ASSERTCRASH(TheGameText != nullptr, ("TheGameText is null"));
@@ -193,41 +231,59 @@ static void updateWindowTitle()
 		title.concat(str);
 	}
 
-	UnicodeString productString = TheVersion->getUnicodeProductString();
+	const UnicodeString modTitle = getModTitle();
 
-	if (!productString.isEmpty())
+	if (TheGlobalData->m_iniCRC != 0)
 	{
 		if (!title.isEmpty())
 			title.concat(L" ");
-		title.concat(productString);
+		title.concat(TheVersion->getUnicodeProductVersionHashString());
 	}
+	else
+	{
+		UnicodeString productString = TheVersion->getUnicodeProductString();
+
+		if (!productString.isEmpty())
+		{
+			if (!title.isEmpty())
+				title.concat(L" ");
+			title.concat(productString);
+		}
 
 #if RTS_GENERALS
-	UnicodeString gameTitle = TheGameText->FETCH_OR_SUBSTITUTE("GUI:Command&ConquerGenerals", L"Command and Conquer Generals");
+		UnicodeString gameTitle = TheGameText->FETCH_OR_SUBSTITUTE("GUI:Command&ConquerGenerals", L"Command and Conquer Generals");
 #elif RTS_ZEROHOUR
-	UnicodeString gameTitle = TheGameText->FETCH_OR_SUBSTITUTE("GUI:Command&ConquerGenerals", L"Command and Conquer Generals Zero Hour");
+		UnicodeString gameTitle = TheGameText->FETCH_OR_SUBSTITUTE("GUI:Command&ConquerGenerals", L"Command and Conquer Generals Zero Hour");
 #endif
 
-	if (!gameTitle.isEmpty())
+		if (!gameTitle.isEmpty())
+		{
+			UnicodeString gameTitleFinal;
+			UnicodeString gameVersion = TheVersion->getUnicodeVersion();
+
+			if (productString.isEmpty())
+			{
+				gameTitleFinal = gameTitle;
+			}
+			else
+			{
+				UnicodeString gameTitleFormat = TheGameText->FETCH_OR_SUBSTITUTE("Version:GameTitle", L"for %ls");
+				gameTitleFinal.format(gameTitleFormat.str(), gameTitle.str());
+			}
+
+			if (!title.isEmpty())
+				title.concat(L" ");
+			title.concat(gameTitleFinal.str());
+			title.concat(L" ");
+			title.concat(gameVersion.str());
+		}
+	}
+
+	if (!modTitle.isEmpty())
 	{
-		UnicodeString gameTitleFinal;
-		UnicodeString gameVersion = TheVersion->getUnicodeVersion();
-
-		if (productString.isEmpty())
-		{
-			gameTitleFinal = gameTitle;
-		}
-		else
-		{
-			UnicodeString gameTitleFormat = TheGameText->FETCH_OR_SUBSTITUTE("Version:GameTitle", L"for %ls");
-			gameTitleFinal.format(gameTitleFormat.str(), gameTitle.str());
-		}
-
 		if (!title.isEmpty())
 			title.concat(L" ");
-		title.concat(gameTitleFinal.str());
-		title.concat(L" ");
-		title.concat(gameVersion.str());
+		title.concat(modTitle);
 	}
 
 	if (!title.isEmpty())
@@ -510,6 +566,7 @@ void GameEngine::init()
 		xferCRC.close();
 		TheWritableGlobalData->m_iniCRC = xferCRC.getCRC();
 		DEBUG_LOG(("INI CRC is 0x%8.8X", TheGlobalData->m_iniCRC));
+		updateWindowTitle();
 
 		TheSubsystemList->postProcessLoadAll();
 
