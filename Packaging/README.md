@@ -25,6 +25,7 @@ Share the zip as a file or attach it to a GitHub Release. Don't commit it: it's 
 | `generalszh.exe` | The game |
 | `Launch-ZH.bat` | Finds the game folder in the registry (`InstallPath` under `SOFTWARE\Electronic Arts\EA Games\Command and Conquer Generals Zero Hour`, which Steam, the EA App and the CD version write) and starts the game with `-setCwd <game folder>`. Extra options are passed on. A `gamedir.txt` next to it overrides the folder. |
 | `Launch-ZH-Shockwave.bat` | The same with `-mod "Mods\Shockwave Chaos"` |
+| `Copy-Shockwave.bat`, `Copy-Shockwave.ps1` | Copies the newest Shockwave Chaos that GenLauncher installed (`<game folder>\GLM\Shockwave Chaos Mod\<version>`) to `Documents\Command and Conquer Generals Zero Hour Data\Mods\Shockwave Chaos`, renaming `.gib` to `.big`, and replaces an older copy there. `-Source <folder>` takes the archives from another folder. |
 | `README.txt` | Instructions for friends, from `Packaging\README.txt` with the version and source link filled in |
 | `LICENSE.md` | The license, which the GPL requires next to the binary |
 | `SHA256SUMS.txt` | Checksums of the files |
@@ -35,5 +36,6 @@ dynamically. `README.txt` links it.
 ## Notes
 
 - For multiplayer, everyone needs the same `generalszh.exe`. The window title shows its `exe:` checksum.
-- Mods are third-party content. Friends get them from the mod's own download; the package only has the launcher.
+- Mods are third-party content. Friends get them from the mod's own download or GenLauncher; the package only has the
+  launcher and the copy script.
 - Don't use the CMake install target for this. It copies into the game folder and replaces retail DLLs there.

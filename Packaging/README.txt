@@ -38,10 +38,15 @@ contains the full path of the game folder (the folder that holds WindowZH.big).
 
 Shockwave Chaos mod (optional)
 ------------------------------
-Get the mod from its official download (or GenLauncher), then put its archives in:
-  Documents\Command and Conquer Generals Zero Hour Data\Mods\Shockwave Chaos
-GenLauncher stores them as .gib files; copy them there and rename .gib to .big. Copy its Data
-folder (movies) there too. Then start Launch-ZH-Shockwave.bat.
+1. Install Shockwave Chaos with GenLauncher (it is not included in this package).
+2. Double-click Copy-Shockwave.bat. It copies the mod from GenLauncher's folder to
+   Documents\Command and Conquer Generals Zero Hour Data\Mods\Shockwave Chaos and renames its
+   .gib archives to .big. GenLauncher's copy stays as it is. Run it again after GenLauncher
+   updates the mod; it replaces the previous copy.
+3. Start Launch-ZH-Shockwave.bat.
+
+If you got the mod from its own download instead, run in PowerShell:
+  .\Copy-Shockwave.ps1 -Source "<folder with the mod's .gib or .big files>"
 
 
 Multiplayer

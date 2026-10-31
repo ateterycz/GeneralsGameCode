@@ -50,8 +50,8 @@ function Write-TextFile([string]$path, [string]$text) {
 }
 
 Copy-Item -LiteralPath $Exe -Destination $stage
-foreach ($launcher in 'Launch-ZH.bat', 'Launch-ZH-Shockwave.bat') {
-	Write-TextFile (Join-Path $stage $launcher) ([IO.File]::ReadAllText((Join-Path $PSScriptRoot $launcher)))
+foreach ($script in 'Launch-ZH.bat', 'Launch-ZH-Shockwave.bat', 'Copy-Shockwave.bat', 'Copy-Shockwave.ps1') {
+	Write-TextFile (Join-Path $stage $script) ([IO.File]::ReadAllText((Join-Path $PSScriptRoot $script)))
 }
 $readme = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'README.txt'))
 $readme = $readme.Replace('{OWNER}', $owner).Replace('{VERSION}', $version).Replace('{SOURCE_URL}', $sourceUrl)
