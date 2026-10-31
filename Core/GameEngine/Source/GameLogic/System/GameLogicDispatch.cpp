@@ -261,8 +261,7 @@ void GameLogic::clearGameData( Bool showScoreScreen )
 	// TheSuperHackers @feature ateterycz 29/10/2026 Writes the game end to the session log in all builds.
 	if (!isInShellGame())
 	{
-		const UnsignedInt seconds = getFrame() / LOGICFRAMES_PER_SECOND;
-		SessionLog::log("Game end at frame %u after %u:%2.2u of game time", getFrame(), seconds / 60, seconds % 60);
+		SessionLog::logGameEnd();
 	}
 
 	setClearingGameData( TRUE );

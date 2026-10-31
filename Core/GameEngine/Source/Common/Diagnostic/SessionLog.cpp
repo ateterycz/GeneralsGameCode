@@ -21,6 +21,9 @@
 #include "Common/Diagnostic/SessionLog.h"
 #include "Common/Diagnostic/SimulationMathCrc.h"
 #include "Common/GlobalData.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
+#include "Common/PlayerTemplate.h"
 #include "Common/RandomValue.h"
 #include "Common/Recorder.h"
 #include "Common/StackDump.h"
@@ -197,8 +200,41 @@ void SessionLog::logGameStart(Bool loadingSaveGame)
 
 			AsciiString name;
 			name.translate(slot->getName());
-			log("  Slot %d: %s %s%s", i, getSlotTypeName(slot), name.str(), (i == TheGameInfo->getLocalSlotNum()) ? " (local player)" : "");
+
+			// TheSuperHackers @tweak ateterycz 30/10/2026 Also logs the faction, which is chosen at game start for a random
+			// slot, and the color, team and start position, so that a player in the log can be told apart in the game.
+			const PlayerTemplate *faction = (slot->getPlayerTemplate() >= 0) ? ThePlayerTemplateStore->getNthPlayerTemplate(slot->getPlayerTemplate()) : nullptr;
+			log("  Slot %d: %s %s%s, faction %s, color %d, team %d, start position %d", i, getSlotTypeName(slot), name.str(),
+				(i == TheGameInfo->getLocalSlotNum()) ? " (local player)" : "", faction ? faction->getName().str() : "none",
+				slot->getColor(), slot->getTeamNumber(), slot->getStartPos());
 		}
+	}
+}
+
+void SessionLog::logGameEnd()
+{
+	if (theSessionLogFile == nullptr)
+		return;
+
+	const UnsignedInt seconds = TheGameLogic->getFrame() / LOGICFRAMES_PER_SECOND;
+	log("Game end at frame %u after %u:%2.2u of game time", TheGameLogic->getFrame(), seconds / 60, seconds % 60);
+
+	// TheSuperHackers @tweak ateterycz 30/10/2026 Logs what each player did, so that a player that did nothing, such as
+	// an AI that is broken in a mod, shows up in the log.
+	for (Int i = 0; i < ThePlayerList->getPlayerCount(); ++i)
+	{
+		Player *player = ThePlayerList->getNthPlayer(i);
+		if (player == nullptr || !player->isPlayableSide())
+			continue;
+
+		ScoreKeeper *score = player->getScoreKeeper();
+		AsciiString name;
+		name.translate(player->getPlayerDisplayName());
+		log("  Player %s, %s: built %d units and %d buildings, lost %d units and %d buildings, destroyed %d units and %d buildings, earned %d and spent %d money%s",
+			name.str(), player->getSide().str(), score->getTotalUnitsBuilt(), score->getTotalBuildingsBuilt(),
+			score->getTotalUnitsLost(), score->getTotalBuildingsLost(), score->getTotalUnitsDestroyed(),
+			score->getTotalBuildingsDestroyed(), score->getTotalMoneyEarned(), score->getTotalMoneySpent(),
+			player->isPlayerDead() ? ", defeated" : "");
 	}
 }
 

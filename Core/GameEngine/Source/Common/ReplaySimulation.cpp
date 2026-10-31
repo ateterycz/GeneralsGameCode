@@ -20,6 +20,7 @@
 
 #include "Common/ReplaySimulation.h"
 
+#include "Common/Diagnostic/SessionLog.h"
 #include "Common/GameEngine.h"
 #include "Common/LocalFileSystem.h"
 #include "Common/Recorder.h"
@@ -108,6 +109,9 @@ int ReplaySimulation::simulateReplaysInThisProcess(const std::vector<AsciiString
 			printf("Elapsed Time: %02d:%02d Game Time: %02d:%02d/%02d:%02d\n",
 					realTimeSec/60, realTimeSec%60, gameTimeSec/60, gameTimeSec%60, totalTimeSec/60, totalTimeSec%60);
 			fflush(stdout);
+
+			// TheSuperHackers @tweak ateterycz 30/10/2026 A simulated replay ends without clearing the game, so log its end here.
+			SessionLog::logGameEnd();
 		}
 		else
 		{

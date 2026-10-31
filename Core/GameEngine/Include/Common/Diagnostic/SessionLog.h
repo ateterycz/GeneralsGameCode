@@ -37,6 +37,7 @@ public:
 	static void logLine(const char *line);
 
 	static void logGameStart(Bool loadingSaveGame);
+	static void logGameEnd();
 	static void logFatalError(const char *reason);
 	static void logException(struct _EXCEPTION_POINTERS *exceptionPointers);
 };
